@@ -13,8 +13,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "axios": "1.7.9",
-    "hls.js": "1.5.18",
-    "swr": "2.2.5"
+    "hls.js": "1.5.18"
   },
   "devDependencies": {
     "eslint": "9.17.0",

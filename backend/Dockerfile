@@ -6,14 +6,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# WeasyPrint (PDF), psycopg va Pillow uchun tizim kutubxonalari
+# WeasyPrint 53+ faqat Pango'ga tayanadi (cairo/gdk-pixbuf endi shart emas).
+# psycopg[binary] va Pillow uchun ham build-essential kifoya.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libcairo2 \
-    libgdk-pixbuf2.0-0 \
+    libpangoft2-1.0-0 \
     libffi-dev \
     shared-mime-info \
     fonts-dejavu-core \
