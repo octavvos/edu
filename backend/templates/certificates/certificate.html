@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    body {
+      margin: 0; font-family: "DejaVu Sans", sans-serif; text-align: center;
+      padding: 60px 80px; box-sizing: border-box;
+      background: {% if certificate.template.background_image %}url('{{ certificate.template.background_image.url }}') no-repeat center/cover{% else %}#f8f9fb{% endif %};
+    }
+    .title { font-size: 42px; font-weight: bold; color: #1a1a2e; margin-bottom: 10px; }
+    .subtitle { font-size: 18px; color: #555; margin-bottom: 40px; }
+    .body-text { font-size: 22px; color: #222; margin: 40px 0; line-height: 1.6; }
+    .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 60px; }
+    .signature img { max-height: 60px; }
+    .qr img { width: 90px; height: 90px; }
+    .code { font-size: 12px; color: #888; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  {% if certificate.template.logo %}<img src="{{ certificate.template.logo.url }}" style="height:50px;">{% endif %}
+  <div class="title">SERTIFIKAT</div>
+  <div class="subtitle">Onlayn ta'lim platformasi</div>
+  <div class="body-text">{{ body_text }}</div>
+  <div class="footer">
+    <div class="signature">
+      {% if certificate.template.signature_image %}<img src="{{ certificate.template.signature_image.url }}">{% endif %}
+      <div>Imzo</div>
+    </div>
+    <div class="qr">
+      <img src="data:image/png;base64,{{ qr_base64 }}">
+      <div class="code">{{ certificate.code }}</div>
+      <div class="code">{{ verify_url }}</div>
+    </div>
+  </div>
+</body>
+</html>
