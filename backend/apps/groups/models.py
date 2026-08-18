@@ -131,6 +131,44 @@ class GroupMembership(BaseModel):
         return f"{self.student} @ {self.group}"
 
 
+class AttendanceStatus(models.TextChoices):
+    PRESENT = "present", "Keldi"
+    LATE = "late", "Kechikdi"
+    EXCUSED = "excused", "Sababli"
+    ABSENT = "absent", "Kelmadi"
+
+
+class Attendance(BaseModel):
+    """
+    Bitta o'quvchining bitta kundagi davomati. Mentor guruh bo'yicha,
+    sana tanlab belgilaydi — shuning uchun kalit (guruh, o'quvchi, sana).
+    """
+
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="attendances")
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="attendances",
+    )
+    date = models.DateField()
+    status = models.CharField(max_length=20, choices=AttendanceStatus.choices)
+    note = models.CharField(max_length=255, blank=True)
+    marked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+
+    class Meta:
+        db_table = "groups_attendance"
+        ordering = ["-date"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["group", "student", "date"], name="uniq_attendance_per_day",
+            ),
+        ]
+        indexes = [models.Index(fields=["group", "date"])]
+
+    def __str__(self):
+        return f"{self.student} @ {self.date} [{self.status}]"
+
+
 class JoinRequestStatus(models.TextChoices):
     PENDING = "pending", "Tasdiqlash kutilmoqda"
     APPROVED = "approved", "Tasdiqlangan"

@@ -166,6 +166,33 @@ vaqt va tekshirilmagan topshiriqlar. "Xavf ostida" mezonlari
 
 Xavf ostidagilar ro'yxat tepasida, har biri **sababi bilan** ko'rsatiladi.
 
+**Davomat** — "Guruhlarim" (`/mentor/groups`) sahifasida har bir guruh uchun
+**Davomat olish** tugmasi bor; u `/mentor/groups/{id}/attendance` sahifasini
+ochadi. Mentor sanani tanlaydi va har bir o'quvchiga holat qo'yadi:
+
+| Holat | Davomatga hisoblanadimi |
+|-------|-------------------------|
+| Keldi (`present`) | ha |
+| Kechikdi (`late`) | ha |
+| Sababli (`excused`) | ha |
+| Kelmadi (`absent`) | yo'q |
+
+Varaqa ochilganda hamma standart **"Keldi"** bo'lib turadi — mentor faqat
+istisnolarni o'zgartiradi. Har bir qatorga ixtiyoriy izoh yozish mumkin.
+Kalit — `(guruh, o'quvchi, sana)`: o'sha kunni qayta saqlash mavjud
+yozuvni yangilaydi, dublikat yaratmaydi. Sahifa pastida guruhning umumiy
+davomat foizi va davomat olingan kunlar ro'yxati ko'rinadi.
+
+- `GET /api/v1/mentor/groups/{group_id}/attendance/?date=YYYY-MM-DD`
+  — kunlik varaqa + olingan kunlar + umumiy hisob (`date` berilmasa bugun)
+- `POST /api/v1/mentor/groups/{group_id}/attendance/` — kunlik davomatni saqlaydi
+
+Faqat guruhning **faol** a'zosiga davomat qo'yiladi (chiqarilgan yoki boshqa
+guruhga ko'chirilgan o'quvchiga qo'yib bo'lmaydi), kelajakdagi sana rad
+etiladi, begona mentor guruhga umuman kira olmaydi.
+Logika: `apps/groups/services.py::mark_attendance`, o'qish qatlami
+`apps/groups/attendance.py`.
+
 **Kontent boshqaruvi** — mentor o'ziga biriktirilgan guruh(lar)ning kursiga
 material yuklaydi va test ochadi (`content.manage` huquqi):
 

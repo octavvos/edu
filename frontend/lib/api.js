@@ -162,6 +162,11 @@ export const mentorApi = {
       material_id: materialId || null,
     }),
   groupLeaderboard: (groupId) => api.get(`/mentor/groups/${groupId}/leaderboard/`),
+  // Davomat
+  attendance: (groupId, date) =>
+    api.get(`/mentor/groups/${groupId}/attendance/`, { params: date ? { date } : {} }),
+  markAttendance: (groupId, date, records) =>
+    api.post(`/mentor/groups/${groupId}/attendance/`, { date, records }),
 };
 
 export const studentApi = {

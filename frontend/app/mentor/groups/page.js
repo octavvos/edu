@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
-import { Swap, Users, X } from "../../../components/Icons";
+import { Calendar, Swap, Users, X } from "../../../components/Icons";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { initials, useAuth } from "../../../lib/auth";
 
@@ -121,27 +122,34 @@ export default function MentorGroupsPage() {
 
           {activeGroup && (
             <div className="card mb-3">
-              <div className="row" style={{ gap: 20 }}>
-                <div>
-                  <div className="stat-label">Kurs</div>
-                  <div className="strong mt-1">{activeGroup.course_title}</div>
-                </div>
-                <div>
-                  <div className="stat-label">Sig&apos;im</div>
-                  <div className="strong mt-1">
-                    {activeGroup.active_members_count} / {activeGroup.capacity}
+              <div className="row-between" style={{ gap: 20, alignItems: "flex-end" }}>
+                <div className="row" style={{ gap: 20 }}>
+                  <div>
+                    <div className="stat-label">Kurs</div>
+                    <div className="strong mt-1">{activeGroup.course_title}</div>
+                  </div>
+                  <div>
+                    <div className="stat-label">Sig&apos;im</div>
+                    <div className="strong mt-1">
+                      {activeGroup.active_members_count} / {activeGroup.capacity}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="stat-label">Jadval</div>
+                    <div className="strong mt-1 small">
+                      {activeGroup.schedules.length
+                        ? activeGroup.schedules
+                            .map((s) => `${s.weekday_label} ${s.start_time.slice(0, 5)}`)
+                            .join(" · ")
+                        : "—"}
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <div className="stat-label">Jadval</div>
-                  <div className="strong mt-1 small">
-                    {activeGroup.schedules.length
-                      ? activeGroup.schedules
-                          .map((s) => `${s.weekday_label} ${s.start_time.slice(0, 5)}`)
-                          .join(" · ")
-                      : "—"}
-                  </div>
-                </div>
+
+                <Link href={`/mentor/groups/${activeGroup.id}/attendance`} className="btn btn-sm">
+                  <Calendar width={15} height={15} />
+                  Davomat olish
+                </Link>
               </div>
             </div>
           )}

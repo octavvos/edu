@@ -12,6 +12,8 @@ from apps.accounts.models import UserStatus
 from apps.core.events import EVENT_STUDENT_ADMITTED, EVENT_STUDENT_TRANSFERRED, publish
 from apps.core.exceptions import DomainError
 from apps.groups.models import (
+    Attendance,
+    AttendanceStatus,
     Group,
     GroupMembership,
     GroupSchedule,
@@ -188,3 +190,47 @@ def remove_student(*, student, group: Group, mentor) -> None:
     GroupMembership.objects.filter(
         group=group, student=student, status=MembershipStatus.ACTIVE,
     ).update(status=MembershipStatus.REMOVED, left_at=timezone.now())
+
+
+# ---------------------------------------------------------------------------
+# Davomat
+# ---------------------------------------------------------------------------
+
+@transaction.atomic
+def mark_attendance(*, mentor, group: Group, date, records: list[dict]) -> int:
+    """
+    Guruhning bir kunlik davomatini belgilaydi. `records` — har biri
+    `{"student_id": ..., "status": ..., "note": ...}`. Qayta belgilash
+    mavjud yozuvni yangilaydi (kunlik kalit: guruh + o'quvchi + sana).
+
+    Faqat guruhning FAOL a'zolari qabul qilinadi — chiqarilgan yoki
+    boshqa guruhga ko'chirilgan o'quvchiga davomat qo'yib bo'lmaydi.
+    """
+    _assert_mentor_owns_group(mentor, group)
+
+    if date > timezone.localdate():
+        raise GroupError("Kelajakdagi sana uchun davomat olib bo'lmaydi", code="future_date")
+
+    member_ids = set(
+        GroupMembership.objects.filter(
+            group=group, status=MembershipStatus.ACTIVE,
+        ).values_list("student_id", flat=True),
+    )
+    valid_statuses = set(AttendanceStatus.values)
+
+    for record in records:
+        student_id = record["student_id"]
+        if student_id not in member_ids:
+            raise GroupError("O'quvchi bu guruhning faol a'zosi emas", code="not_a_member")
+        if record["status"] not in valid_statuses:
+            raise GroupError("Noto'g'ri davomat holati", code="invalid_status")
+
+        Attendance.objects.update_or_create(
+            group=group, student_id=student_id, date=date,
+            defaults={
+                "status": record["status"],
+                "note": record.get("note", "") or "",
+                "marked_by": mentor,
+            },
+        )
+    return len(records)

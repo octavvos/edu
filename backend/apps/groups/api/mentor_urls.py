@@ -41,6 +41,8 @@ urlpatterns = [
          name="mentor-group-members"),
     path("groups/<uuid:group_id>/leaderboard/", views.MentorGroupLeaderboardView.as_view(),
          name="mentor-group-leaderboard"),
+    path("groups/<uuid:group_id>/attendance/", views.MentorGroupAttendanceView.as_view(),
+         name="mentor-group-attendance"),
     path("groups/<uuid:group_id>/students/<uuid:student_id>/remove/",
          views.MentorRemoveStudentView.as_view(), name="mentor-remove-student"),
     path("requests/", views.MentorJoinRequestListView.as_view(), name="mentor-requests"),

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.core.models import get_i18n_value
 from apps.groups.models import (
+    AttendanceStatus,
     Group,
     GroupMembership,
     GroupSchedule,
@@ -102,6 +103,41 @@ class TransferSerializer(serializers.Serializer):
 
 class RejectSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class AttendanceRowSerializer(serializers.Serializer):
+    """apps.groups.attendance.AttendanceRow — kunlik varaqa qatori."""
+
+    student_id = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    display_name = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True, allow_null=True)
+    note = serializers.CharField(read_only=True, allow_blank=True)
+
+
+class AttendanceSummaryRowSerializer(serializers.Serializer):
+    """apps.groups.attendance.AttendanceSummaryRow — umumiy hisob."""
+
+    student_id = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    display_name = serializers.CharField(read_only=True)
+    present = serializers.IntegerField(read_only=True)
+    late = serializers.IntegerField(read_only=True)
+    excused = serializers.IntegerField(read_only=True)
+    absent = serializers.IntegerField(read_only=True)
+    total = serializers.IntegerField(read_only=True)
+    attendance_percent = serializers.FloatField(read_only=True)
+
+
+class AttendanceRecordWriteSerializer(serializers.Serializer):
+    student_id = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=AttendanceStatus.choices)
+    note = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class AttendanceMarkSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    records = AttendanceRecordWriteSerializer(many=True, allow_empty=False)
 
 
 class LeaderboardRowSerializer(serializers.Serializer):

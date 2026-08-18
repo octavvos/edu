@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.utils.dateparse import parse_date
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -6,9 +7,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
+from apps.core.exceptions import DomainError
 from apps.courses.models import Course
 from apps.groups import selectors, services
 from apps.groups.api.serializers import (
+    AttendanceMarkSerializer,
+    AttendanceRowSerializer,
+    AttendanceSummaryRowSerializer,
     GroupCreateSerializer,
     GroupDetailSerializer,
     GroupPublicSerializer,
@@ -130,6 +135,65 @@ class MentorGroupMembersView(APIView):
         group = get_object_or_404(Group, id=group_id, mentor=request.user)
         members = selectors.get_group_members(group)
         return Response(MembershipSerializer(members, many=True).data)
+
+
+class MentorGroupAttendanceView(APIView):
+    """
+    GET  /api/v1/mentor/groups/{group_id}/attendance/?date=YYYY-MM-DD
+         — shu kunning varaqasi (a'zolar + belgilangan holatlar),
+           davomat olingan sanalar va umumiy hisob.
+    POST — kunlik davomatni saqlaydi (qayta yuborilsa yangilanadi).
+    """
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "group.view_own"
+
+    @extend_schema(responses=AttendanceRowSerializer(many=True))
+    def get(self, request, group_id):
+        from django.utils import timezone
+
+        from apps.groups.attendance import (
+            get_attendance_sheet,
+            get_attendance_summary,
+            get_marked_dates,
+        )
+
+        group = get_object_or_404(Group, id=group_id, mentor=request.user)
+
+        date_param = request.query_params.get("date")
+        if date_param:
+            parsed = parse_date(date_param)
+            if not parsed:
+                return Response(
+                    {"detail": "Sana YYYY-MM-DD ko'rinishida bo'lishi kerak"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            date = parsed
+        else:
+            date = timezone.localdate()
+
+        return Response({
+            "date": date,
+            "sheet": AttendanceRowSerializer(get_attendance_sheet(group, date), many=True).data,
+            "marked_dates": get_marked_dates(group),
+            "summary": AttendanceSummaryRowSerializer(get_attendance_summary(group), many=True).data,
+        })
+
+    @extend_schema(request=AttendanceMarkSerializer)
+    def post(self, request, group_id):
+        group = get_object_or_404(Group, id=group_id, mentor=request.user)
+
+        serializer = AttendanceMarkSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            saved = services.mark_attendance(
+                mentor=request.user, group=group,
+                date=serializer.validated_data["date"],
+                records=serializer.validated_data["records"],
+            )
+        except DomainError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+        return Response({"saved": saved}, status=status.HTTP_200_OK)
 
 
 class MentorGroupLeaderboardView(APIView):
