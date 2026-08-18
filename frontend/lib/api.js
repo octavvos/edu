@@ -132,6 +132,7 @@ export const mentorApi = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+  deleteMaterial: (materialId) => api.delete(`/mentor/materials/${materialId}/`),
   createQuiz: (lessonId, settings) => api.post(`/mentor/lessons/${lessonId}/quiz/`, settings),
   quizDetail: (quizId) => api.get(`/mentor/quizzes/${quizId}/`),
   updateQuiz: (quizId, settings) => api.put(`/mentor/quizzes/${quizId}/`, settings),

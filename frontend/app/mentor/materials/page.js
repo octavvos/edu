@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
-import { Book, Check, ChevronDown, ChevronRight, FileText, Upload } from "../../../components/Icons";
+import { Book, Check, ChevronDown, ChevronRight, FileText, Upload, X } from "../../../components/Icons";
 import { errorMessage, mentorApi } from "../../../lib/api";
+import { MATERIAL_ACCEPT, MAX_MATERIAL_SIZE_MB, validateMaterialFile } from "../../../lib/materials";
 import { useAuth } from "../../../lib/auth";
 
 const LESSON_TYPE_LABEL = {
@@ -14,7 +15,7 @@ const LESSON_TYPE_LABEL = {
   homework: "Uy vazifasi",
 };
 
-/** Chap: ixcham dars ro'yxati. O'ng: tanlangan darsning materiali doim ko'rinadi. */
+/** Chap: ixcham dars ro'yxati. O'ng: tanlangan darsning materiallari doim ko'rinadi. */
 export default function MentorMaterialsPage() {
   const { user, loading } = useAuth({ roles: ["mentor"] });
   const [courses, setCourses] = useState([]);
@@ -45,7 +46,7 @@ export default function MentorMaterialsPage() {
   const course = courses.find((c) => c.id === courseId);
   const allLessons = course?.modules.flatMap((m) => m.lessons.map((l) => ({ ...l, moduleTitle: m.title }))) || [];
   const totalLessons = allLessons.length;
-  const uploadedCount = allLessons.filter((l) => l.file_asset).length;
+  const uploadedCount = allLessons.filter((l) => l.materials?.length > 0).length;
   const selected = allLessons.find((l) => l.id === selectedId) || null;
 
   return (
@@ -151,7 +152,7 @@ export default function MentorMaterialsPage() {
 
 function ModuleList({ module, selectedId, onSelect }) {
   const [open, setOpen] = useState(false);
-  const uploaded = module.lessons.filter((l) => l.file_asset).length;
+  const uploaded = module.lessons.filter((l) => l.materials?.length > 0).length;
 
   return (
     <div className="card" style={{ padding: 10 }}>
@@ -171,6 +172,7 @@ function ModuleList({ module, selectedId, onSelect }) {
         <div className="stack mt-1" style={{ gap: 2 }}>
           {module.lessons.map((lesson) => {
             const active = lesson.id === selectedId;
+            const count = lesson.materials?.length || 0;
             return (
               <button
                 key={lesson.id}
@@ -189,8 +191,11 @@ function ModuleList({ module, selectedId, onSelect }) {
                 }}>
                   {lesson.title}
                 </span>
-                {lesson.file_asset && (
-                  <Check width={13} height={13} style={{ flexShrink: 0, color: "var(--success)" }} />
+                {count > 0 && (
+                  <span className="row" style={{ gap: 3, flexShrink: 0, color: "var(--success)" }}>
+                    <Check width={13} height={13} />
+                    {count > 1 && <span className="small">{count}</span>}
+                  </span>
                 )}
               </button>
             );
@@ -206,9 +211,16 @@ function ModuleList({ module, selectedId, onSelect }) {
 function MaterialPanel({ lesson, onChanged, onError }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const materials = lesson.materials || [];
 
   async function upload(file) {
     if (!file) return;
+    const problem = validateMaterialFile(file);
+    if (problem) {
+      onError({ type: "danger", text: problem });
+      return;
+    }
     setUploading(true);
     try {
       await mentorApi.uploadMaterial(lesson.id, file);
@@ -217,6 +229,19 @@ function MaterialPanel({ lesson, onChanged, onError }) {
       onError({ type: "danger", text: errorMessage(err, "Fayl yuklashda xatolik") });
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleDelete(material) {
+    if (!window.confirm(`"${material.original_filename}" o'chirilsinmi?`)) return;
+    setDeletingId(material.id);
+    try {
+      await mentorApi.deleteMaterial(material.id);
+      onChanged();
+    } catch (err) {
+      onError({ type: "danger", text: errorMessage(err, "O'chirishda xatolik") });
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -236,6 +261,40 @@ function MaterialPanel({ lesson, onChanged, onError }) {
 
       {lesson.text_content && <p className="small muted mt-2">{lesson.text_content}</p>}
 
+      {materials.length > 0 && (
+        <div className="stack mt-3" style={{ gap: 6 }}>
+          {materials.map((material) => (
+            <div
+              key={material.id}
+              className="row-between"
+              style={{ padding: "9px 12px", background: "var(--bg-subtle)", borderRadius: "var(--radius)" }}
+            >
+              <a
+                href={material.file}
+                target="_blank"
+                rel="noreferrer"
+                className="row small"
+                style={{ gap: 7, color: "var(--text)", minWidth: 0 }}
+              >
+                <FileText width={15} height={15} style={{ flexShrink: 0 }} />
+                <span className="strong" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {material.original_filename}
+                </span>
+                <span className="dim" style={{ flexShrink: 0 }}>({formatSize(material.size_bytes)})</span>
+              </a>
+              <button
+                className="btn btn-danger-ghost btn-sm"
+                onClick={() => handleDelete(material)}
+                disabled={deletingId === material.id}
+                title="O'chirish"
+              >
+                {deletingId === material.id ? <span className="spinner" /> : <X width={13} height={13} />}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div
         className="mt-3"
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -244,38 +303,21 @@ function MaterialPanel({ lesson, onChanged, onError }) {
         style={{
           border: `1.5px dashed ${dragOver ? "var(--primary)" : "var(--border-strong)"}`,
           borderRadius: "var(--radius)",
-          padding: 22,
+          padding: 20,
           textAlign: "center",
           background: dragOver ? "var(--primary-soft)" : "var(--bg-subtle)",
           transition: "border-color 0.15s, background 0.15s",
         }}
       >
-        {lesson.file_asset ? (
-          <>
-            <a
-              href={lesson.file_asset.file}
-              target="_blank"
-              rel="noreferrer"
-              className="row"
-              style={{ gap: 7, justifyContent: "center", color: "var(--text)" }}
-            >
-              <FileText width={18} height={18} />
-              <span className="strong">{lesson.file_asset.original_filename}</span>
-            </a>
-            <p className="small dim mt-1">{formatSize(lesson.file_asset.size_bytes)}</p>
-          </>
-        ) : (
-          <>
-            <Upload width={22} height={22} className="dim" style={{ marginBottom: 6 }} />
-            <p className="small muted">Faylni shu yerga tashlang yoki tanlang</p>
-          </>
-        )}
+        <Upload width={20} height={20} className="dim" style={{ marginBottom: 6 }} />
+        <p className="small muted">Faylni shu yerga tashlang yoki tanlang</p>
 
-        <label className={`btn btn-sm mt-3 ${lesson.file_asset ? "btn-ghost" : ""}`} style={{ cursor: "pointer" }}>
+        <label className="btn btn-sm mt-3" style={{ cursor: "pointer" }}>
           {uploading ? <span className="spinner" /> : <Upload width={14} height={14} />}
-          {lesson.file_asset ? "Almashtirish" : "Fayl tanlash"}
+          {materials.length > 0 ? "Yana fayl qo'shish" : "Fayl tanlash"}
           <input
             type="file"
+            accept={MATERIAL_ACCEPT}
             onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ""; }}
             style={{ display: "none" }}
             disabled={uploading}
@@ -284,8 +326,8 @@ function MaterialPanel({ lesson, onChanged, onError }) {
       </div>
 
       <div className="alert alert-info mt-3" style={{ marginBottom: 0 }}>
-        Tavsiya: PDF, PPTX, DOCX yoki ZIP — o&apos;quvchi to&apos;g&apos;ridan-to&apos;g&apos;ri
-        yuklab olib ochadi. Video darsni Bunny Stream orqali alohida yuklash tavsiya etiladi.
+        Ruxsat etilgan: PDF, PPT(X), DOC(X), XLS(X), ZIP, rasm (PNG/JPG/GIF), TXT —
+        max {MAX_MATERIAL_SIZE_MB} MB. Video darsni Bunny Stream orqali alohida yuklash tavsiya etiladi.
       </div>
     </div>
   );

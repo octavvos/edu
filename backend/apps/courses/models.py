@@ -127,9 +127,9 @@ class Lesson(BaseModel):
     video_asset = models.OneToOneField(
         "courses.VideoAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="lesson",
     )
-    file_asset = models.OneToOneField(
-        "courses.FileAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="lesson",
-    )
+    # Bitta darsga bir nechta fayl material yuklash mumkin (slaydlar + amaliy
+    # fayl + qo'shimcha o'qish kabi) — shuning uchun FileAsset tomonidan FK
+    # (apps.courses.FileAsset.lesson), bu yerda OneToOne emas.
 
     unlock_rule = models.JSONField(default=dict, blank=True)
     """
@@ -180,6 +180,14 @@ class VideoAsset(BaseModel):
 
 
 class FileAsset(BaseModel):
+    """
+    Darsga biriktirilgan qo'shimcha material (slayd, hujjat va h.k.).
+    Bitta darsga bir nechtasi biriktirilishi mumkin (`lesson.materials`).
+    """
+
+    lesson = models.ForeignKey(
+        Lesson, on_delete=models.CASCADE, null=True, blank=True, related_name="materials",
+    )
     file = models.FileField(upload_to="courses/files/")
     original_filename = models.CharField(max_length=255)
     mime_type = models.CharField(max_length=100, blank=True)
@@ -188,3 +196,4 @@ class FileAsset(BaseModel):
 
     class Meta:
         db_table = "courses_file_asset"
+        ordering = ["created_at"]

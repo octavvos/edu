@@ -28,7 +28,7 @@ class LessonPublicSerializer(serializers.ModelSerializer):
 
 class LessonDetailSerializer(serializers.ModelSerializer):
     video_asset = VideoAssetSerializer(read_only=True)
-    file_asset = FileAssetSerializer(read_only=True)
+    materials = FileAssetSerializer(many=True, read_only=True)
     title = I18nCharField()
     text_content = I18nCharField()
 
@@ -36,7 +36,7 @@ class LessonDetailSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = (
             "id", "type", "title", "text_content", "order", "is_required",
-            "is_free_preview", "unlock_rule", "video_asset", "file_asset",
+            "is_free_preview", "unlock_rule", "video_asset", "materials",
         )
 
 

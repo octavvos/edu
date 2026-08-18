@@ -5,6 +5,7 @@ import {
   Check, ChevronDown, ChevronRight, FileText, HelpCircle, Plus, Upload, X,
 } from "../Icons";
 import { errorMessage, mentorApi } from "../../lib/api";
+import { MATERIAL_ACCEPT, validateMaterialFile } from "../../lib/materials";
 
 const LESSON_TYPES = [
   { value: "text", label: "Matnli dars" },
@@ -184,6 +185,11 @@ function LessonRow({ lesson, onChanged, onError }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    const problem = validateMaterialFile(file);
+    if (problem) {
+      onError({ type: "danger", text: problem });
+      return;
+    }
     setUploading(true);
     try {
       await mentorApi.uploadMaterial(lesson.id, file);
@@ -236,8 +242,14 @@ function LessonRow({ lesson, onChanged, onError }) {
           ) : (
             <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }}>
               {uploading ? <span className="spinner" /> : <Upload width={14} height={14} />}
-              {lesson.file_asset ? "Almashtirish" : "Material yuklash"}
-              <input type="file" onChange={handleFileChange} style={{ display: "none" }} disabled={uploading} />
+              {lesson.materials?.length > 0 ? "Yana fayl qo'shish" : "Material yuklash"}
+              <input
+                type="file"
+                accept={MATERIAL_ACCEPT}
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+                disabled={uploading}
+              />
             </label>
           )}
         </div>
@@ -247,18 +259,23 @@ function LessonRow({ lesson, onChanged, onError }) {
         <p className="small muted mt-2 fade-in">{lesson.text_content}</p>
       )}
 
-      {lesson.file_asset && (
-        <a
-          href={lesson.file_asset.file}
-          target="_blank"
-          rel="noreferrer"
-          className="row mt-2 small"
-          style={{ gap: 6, color: "var(--text-secondary)" }}
-        >
-          <FileText width={14} height={14} />
-          {lesson.file_asset.original_filename}
-          <span className="dim">({formatSize(lesson.file_asset.size_bytes)})</span>
-        </a>
+      {lesson.materials?.length > 0 && (
+        <div className="stack mt-2" style={{ gap: 4 }}>
+          {lesson.materials.map((material) => (
+            <a
+              key={material.id}
+              href={material.file}
+              target="_blank"
+              rel="noreferrer"
+              className="row small"
+              style={{ gap: 6, color: "var(--text-secondary)" }}
+            >
+              <FileText width={14} height={14} />
+              {material.original_filename}
+              <span className="dim">({formatSize(material.size_bytes)})</span>
+            </a>
+          ))}
+        </div>
       )}
 
       {quizOpen && lesson.quiz_id && (

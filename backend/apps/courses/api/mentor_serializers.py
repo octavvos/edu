@@ -4,13 +4,14 @@ from rest_framework import serializers
 
 from apps.core.fields import I18nCharField
 from apps.courses.api.serializers import FileAssetSerializer, VideoAssetSerializer
+from apps.courses.constants import ALLOWED_MATERIAL_EXTENSIONS, MAX_MATERIAL_SIZE_BYTES, MAX_MATERIAL_SIZE_MB
 from apps.courses.models import Course, Lesson, LessonType, Module
 
 
 class MentorLessonSerializer(serializers.ModelSerializer):
     title = I18nCharField()
     text_content = I18nCharField()
-    file_asset = FileAssetSerializer(read_only=True)
+    materials = FileAssetSerializer(many=True, read_only=True)
     video_asset = VideoAssetSerializer(read_only=True)
     quiz_id = serializers.SerializerMethodField()
 
@@ -18,7 +19,7 @@ class MentorLessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = (
             "id", "type", "title", "text_content", "order", "is_required",
-            "is_free_preview", "file_asset", "video_asset", "quiz_id",
+            "is_free_preview", "materials", "video_asset", "quiz_id",
         )
 
     def get_quiz_id(self, obj) -> str | None:
@@ -58,3 +59,17 @@ class LessonWriteSerializer(serializers.Serializer):
 class MaterialUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
     is_downloadable = serializers.BooleanField(default=True)
+
+    def validate_file(self, value):
+        ext = value.name.rsplit(".", 1)[-1].lower() if "." in value.name else ""
+        if ext not in ALLOWED_MATERIAL_EXTENSIONS:
+            raise serializers.ValidationError(
+                f"Ruxsat etilmagan fayl turi ('.{ext}'). Ruxsat etilgan turlar: "
+                + ", ".join(sorted(ALLOWED_MATERIAL_EXTENSIONS)) + ".",
+            )
+        if value.size > MAX_MATERIAL_SIZE_BYTES:
+            raise serializers.ValidationError(
+                f"Fayl hajmi {MAX_MATERIAL_SIZE_MB} MB dan oshmasligi kerak "
+                f"(yuborilgan: {value.size / 1024 / 1024:.1f} MB).",
+            )
+        return value

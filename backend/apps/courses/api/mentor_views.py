@@ -17,7 +17,7 @@ from apps.courses.api.mentor_serializers import (
     MentorLessonSerializer,
     ModuleWriteSerializer,
 )
-from apps.courses.models import Course, Lesson, Module
+from apps.courses.models import Course, FileAsset, Lesson, Module
 from apps.rbac.permissions import HasPermission
 
 
@@ -30,7 +30,7 @@ class MentorCourseListView(APIView):
     @extend_schema(responses=MentorCourseSerializer(many=True))
     def get(self, request):
         courses = selectors.get_mentor_courses(request.user).prefetch_related(
-            "modules__lessons__file_asset", "modules__lessons__video_asset", "modules__lessons__quiz",
+            "modules__lessons__materials", "modules__lessons__video_asset", "modules__lessons__quiz",
         )
         return Response(
             MentorCourseSerializer(courses, many=True, context={"request": request}).data,
@@ -106,4 +106,24 @@ class MentorMaterialUploadView(APIView):
             is_downloadable=serializer.validated_data["is_downloadable"],
         )
         lesson.refresh_from_db()
-        return Response(MentorLessonSerializer(lesson, context={"request": request}).data)
+        return Response(
+            MentorLessonSerializer(lesson, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class MentorMaterialDeleteView(APIView):
+    """DELETE /api/v1/mentor/materials/{material_id}/"""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "content.manage"
+
+    def delete(self, request, material_id):
+        material = get_object_or_404(
+            FileAsset.objects.select_related("lesson__module__course"), id=material_id,
+        )
+        try:
+            services.remove_file_material(mentor=request.user, material=material)
+        except DomainError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -24,6 +24,8 @@ urlpatterns = [
          name="mentor-module-lessons"),
     path("lessons/<uuid:lesson_id>/material/", content_views.MentorMaterialUploadView.as_view(),
          name="mentor-lesson-material"),
+    path("materials/<uuid:material_id>/", content_views.MentorMaterialDeleteView.as_view(),
+         name="mentor-material-delete"),
     # Testlar (apps.assessments)
     path("lessons/<uuid:lesson_id>/quiz/", quiz_views.MentorQuizCreateView.as_view(),
          name="mentor-lesson-quiz"),

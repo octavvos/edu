@@ -51,14 +51,14 @@ def test_add_file_material_attaches_to_lesson():
 
     asset = services.add_file_material(lesson=lesson, file=upload)
 
-    lesson.refresh_from_db()
-    assert lesson.file_asset_id == asset.id
+    assert list(lesson.materials.values_list("id", flat=True)) == [asset.id]
     assert asset.original_filename == "dars.pdf"
     assert asset.mime_type == "application/pdf"
     assert asset.size_bytes > 0
 
 
-def test_add_file_material_replaces_previous_one():
+def test_add_file_material_keeps_multiple_files():
+    """Bitta darsga bir nechta material qo'shilishi mumkin — avvalgisi o'chirilmaydi."""
     lesson = LessonFactory()
     first = services.add_file_material(
         lesson=lesson, file=SimpleUploadedFile("v1.pdf", b"old"),
@@ -67,11 +67,68 @@ def test_add_file_material_replaces_previous_one():
         lesson=lesson, file=SimpleUploadedFile("v2.pdf", b"new"),
     )
 
-    lesson.refresh_from_db()
-    assert lesson.file_asset_id == second.id
     from apps.courses.models import FileAsset
 
-    assert not FileAsset.objects.filter(id=first.id).exists()
+    assert set(lesson.materials.values_list("id", flat=True)) == {first.id, second.id}
+    assert FileAsset.objects.filter(id=first.id).exists()
+
+
+def test_remove_file_material_by_owning_mentor():
+    mentor = UserFactory()
+    course = CourseFactory()
+    GroupFactory(mentor=mentor, course=course)
+    lesson = LessonFactory(module__course=course)
+    material = services.add_file_material(lesson=lesson, file=SimpleUploadedFile("a.pdf", b"x"))
+
+    services.remove_file_material(mentor=mentor, material=material)
+
+    from apps.courses.models import FileAsset
+
+    assert not FileAsset.objects.filter(id=material.id).exists()
+
+
+def test_remove_file_material_rejected_for_unrelated_mentor():
+    lesson = LessonFactory()
+    material = services.add_file_material(lesson=lesson, file=SimpleUploadedFile("a.pdf", b"x"))
+    outsider = UserFactory()
+
+    with pytest.raises(DomainError) as exc:
+        services.remove_file_material(mentor=outsider, material=material)
+    assert exc.value.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Material yuklash validatsiyasi (kengaytma / hajm)
+# ---------------------------------------------------------------------------
+
+def test_material_upload_rejects_disallowed_extension():
+    from apps.courses.api.mentor_serializers import MaterialUploadSerializer
+
+    upload = SimpleUploadedFile("virus.exe", b"MZ...", content_type="application/octet-stream")
+    serializer = MaterialUploadSerializer(data={"file": upload})
+
+    assert not serializer.is_valid()
+    assert "file" in serializer.errors
+
+
+def test_material_upload_accepts_allowed_extension():
+    from apps.courses.api.mentor_serializers import MaterialUploadSerializer
+
+    upload = SimpleUploadedFile("dars.pdf", b"%PDF-1.4", content_type="application/pdf")
+    serializer = MaterialUploadSerializer(data={"file": upload})
+
+    assert serializer.is_valid(), serializer.errors
+
+
+def test_material_upload_rejects_oversized_file():
+    from apps.courses.api.mentor_serializers import MaterialUploadSerializer
+    from apps.courses.constants import MAX_MATERIAL_SIZE_BYTES
+
+    oversized = SimpleUploadedFile("big.pdf", b"x" * (MAX_MATERIAL_SIZE_BYTES + 1))
+    serializer = MaterialUploadSerializer(data={"file": oversized})
+
+    assert not serializer.is_valid()
+    assert "file" in serializer.errors
 
 
 def test_add_module_and_lesson_via_services():

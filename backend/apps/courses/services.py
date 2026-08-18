@@ -62,20 +62,25 @@ def add_file_material(*, lesson: Lesson, file, is_downloadable: bool = True) -> 
     Material yuklash — hujjat/slayd/qo'shimcha fayl. Haqiqiy S3/MinIO
     backend orqali saqlanadi (STORAGES["default"]), video kabi tashqi
     provayder (Bunny) kerak emas.
+
+    Bitta darsga bir nechta material qo'shilishi mumkin — mavjudlari
+    o'chirilmaydi, yangisi ro'yxatga qo'shiladi.
     """
-    asset = FileAsset.objects.create(
+    return FileAsset.objects.create(
+        lesson=lesson,
         file=file,
         original_filename=getattr(file, "name", "") or "",
         mime_type=getattr(file, "content_type", "") or "",
         size_bytes=getattr(file, "size", 0) or 0,
         is_downloadable=is_downloadable,
     )
-    old_asset = lesson.file_asset
-    lesson.file_asset = asset
-    lesson.save(update_fields=["file_asset", "updated_at"])
-    if old_asset:
-        old_asset.delete()  # eski materialni almashtirishda ortiqcha faylni qoldirmaymiz
-    return asset
+
+
+def remove_file_material(*, mentor, material: FileAsset) -> None:
+    """Mentor o'ziga tegishli kursdagi materialni o'chiradi."""
+    if material.lesson_id:
+        assert_can_manage_lesson(mentor=mentor, lesson=material.lesson)
+    material.delete()
 
 
 def submit_for_moderation(*, actor, course: Course) -> Course:
@@ -166,12 +171,22 @@ def duplicate_course(*, actor, course: Course) -> Course:
         new_module = add_module(course=new_course, title=module.title)
         new_module.order = module.order
         new_module.save(update_fields=["order"])
-        for lesson in module.lessons.order_by("order"):
-            add_lesson(
+        for lesson in module.lessons.order_by("order").prefetch_related("materials"):
+            new_lesson = add_lesson(
                 module=new_module, type=lesson.type, title=lesson.title,
                 text_content=lesson.text_content, is_required=lesson.is_required,
                 is_free_preview=lesson.is_free_preview, unlock_rule=lesson.unlock_rule,
-                video_asset=lesson.video_asset, file_asset=lesson.file_asset,
+                video_asset=lesson.video_asset,
             )
+            # Materiallar fayli qayta yuklanmaydi — bir xil saqlash yo'liga
+            # ishora qiluvchi yangi FileAsset qatori yaratiladi.
+            FileAsset.objects.bulk_create([
+                FileAsset(
+                    lesson=new_lesson, file=material.file.name,
+                    original_filename=material.original_filename, mime_type=material.mime_type,
+                    size_bytes=material.size_bytes, is_downloadable=material.is_downloadable,
+                )
+                for material in lesson.materials.all()
+            ])
     log_action(actor=actor, action="course.duplicate", obj=new_course, after={"source": str(course.id)})
     return new_course

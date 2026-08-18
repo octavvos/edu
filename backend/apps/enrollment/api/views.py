@@ -12,7 +12,12 @@ from apps.enrollment.models import Enrollment, LessonNote
 
 def _get_enrollment_and_lesson(request, enrollment_id, lesson_id):
     enrollment = Enrollment.objects.filter(id=enrollment_id, user=request.user).first()
-    lesson = Lesson.objects.select_related("video_asset", "file_asset").filter(id=lesson_id).first()
+    lesson = (
+        Lesson.objects.select_related("video_asset")
+        .prefetch_related("materials")
+        .filter(id=lesson_id)
+        .first()
+    )
     return enrollment, lesson
 
 
