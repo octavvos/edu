@@ -13,6 +13,7 @@ from apps.groups.api.serializers import (
     GroupDetailSerializer,
     GroupPublicSerializer,
     JoinRequestSerializer,
+    LeaderboardRowSerializer,
     MembershipSerializer,
     RejectSerializer,
     ScheduleSerializer,
@@ -131,6 +132,21 @@ class MentorGroupMembersView(APIView):
         return Response(MembershipSerializer(members, many=True).data)
 
 
+class MentorGroupLeaderboardView(APIView):
+    """GET /api/v1/mentor/groups/{group_id}/leaderboard/ — guruh reytingi."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "group.view_own"
+
+    @extend_schema(responses=LeaderboardRowSerializer(many=True))
+    def get(self, request, group_id):
+        from apps.groups.leaderboard import get_group_leaderboard
+
+        group = get_object_or_404(Group, id=group_id, mentor=request.user)
+        rows = get_group_leaderboard(group)
+        return Response(LeaderboardRowSerializer(rows, many=True).data)
+
+
 class MentorJoinRequestListView(APIView):
     """Tasdiqlash kutilayotgan ro'yxatdan o'tish so'rovlari."""
 
@@ -230,4 +246,24 @@ class MyGroupView(APIView):
         return Response({
             "group": GroupDetailSerializer(membership.group, context={"request": request}).data,
             "join_request": None,
+        })
+
+
+class MyLeaderboardView(APIView):
+    """GET /api/v1/groups/leaderboard/ — o'quvchining o'z guruhi reytingi."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses=LeaderboardRowSerializer(many=True))
+    def get(self, request):
+        from apps.groups.leaderboard import get_group_leaderboard
+
+        membership = selectors.get_active_membership(request.user)
+        if not membership:
+            return Response({"group_name": None, "results": []})
+
+        rows = get_group_leaderboard(membership.group)
+        return Response({
+            "group_name": membership.group.name,
+            "results": LeaderboardRowSerializer(rows, many=True).data,
         })

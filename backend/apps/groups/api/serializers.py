@@ -102,3 +102,14 @@ class TransferSerializer(serializers.Serializer):
 
 class RejectSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class LeaderboardRowSerializer(serializers.Serializer):
+    """apps.groups.leaderboard.LeaderboardRow bilan mos."""
+
+    rank = serializers.IntegerField(read_only=True)
+    student_id = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    display_name = serializers.CharField(read_only=True)
+    total_score = serializers.IntegerField(read_only=True)
+    graded_count = serializers.IntegerField(read_only=True)

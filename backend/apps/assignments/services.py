@@ -41,6 +41,32 @@ def submit_homework(*, user, enrollment, homework: Homework, file=None, text: st
     return submission
 
 
+@transaction.atomic
+def send_homework(*, mentor, lesson, instructions: dict, deadline_at=None, max_score: int = 100,
+                   material=None) -> Homework:
+    """
+    Mentor darsga uy vazifasini yaratadi/yangilaydi — bu "jo'natish" harakati:
+    Homework mavjud bo'lishi bilanoq kursga faol yozilgan barcha o'quvchilarga
+    ko'rinadi (`selectors.get_my_assignments`). Material — mentor shu darsga
+    yuklagan fayllardan biri (taqdimot yoki vazifa), ixtiyoriy.
+    """
+    from apps.courses.services import assert_can_manage_lesson
+
+    assert_can_manage_lesson(mentor=mentor, lesson=lesson)
+
+    if material is not None and material.lesson_id != lesson.id:
+        raise AssignmentError("Material shu darsga tegishli emas", code="material_mismatch")
+
+    homework, _ = Homework.objects.update_or_create(
+        lesson=lesson,
+        defaults={
+            "instructions": instructions, "deadline_at": deadline_at,
+            "max_score": max_score, "material": material,
+        },
+    )
+    return homework
+
+
 def assign_mentor(*, submission: Submission, mentor) -> Submission:
     """H-02: qo'lda biriktirish (mentor bo'sh bo'lsa admin tomonidan)."""
     submission.mentor = mentor

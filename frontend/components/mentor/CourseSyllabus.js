@@ -6,6 +6,7 @@ import {
 } from "../Icons";
 import { errorMessage, mentorApi } from "../../lib/api";
 import { MATERIAL_KIND_LABEL, formatFileSize } from "../../lib/materials";
+import HomeworkSendModal from "./HomeworkSendModal";
 import MaterialLink from "./MaterialLink";
 import MaterialUploadModal from "./MaterialUploadModal";
 
@@ -205,6 +206,9 @@ function LessonRow({ lesson, onChanged, onError }) {
         >
           <span className="badge badge-neutral">{typeLabel(lesson.type)}</span>
           <span className="strong small">{lesson.title}</span>
+          {lesson.type === "homework" && lesson.homework_id && (
+            <span className="badge badge-success">Yuborilgan</span>
+          )}
         </button>
 
         <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
@@ -220,6 +224,15 @@ function LessonRow({ lesson, onChanged, onError }) {
                 Test ochish
               </button>
             )
+          ) : lesson.type === "homework" ? (
+            <>
+              <HomeworkSendModal lesson={lesson} sent={Boolean(lesson.homework_id)} onSent={onChanged} />
+              <MaterialUploadModal
+                lessonId={lesson.id}
+                label={lesson.materials?.length > 0 ? "Yana fayl qo'shish" : "Material yuklash"}
+                onUploaded={onChanged}
+              />
+            </>
           ) : (
             <MaterialUploadModal
               lessonId={lesson.id}

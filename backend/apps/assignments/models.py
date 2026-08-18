@@ -11,6 +11,11 @@ class Homework(BaseModel):
     instructions = i18n_field()
     deadline_at = models.DateTimeField(null=True, blank=True)  # H-05
     max_score = models.PositiveSmallIntegerField(default=100)
+    # Mentor "jo'natish"da tanlagan material (taqdimot yoki vazifa fayli) —
+    # shu darsning materiallaridan biri, ixtiyoriy.
+    material = models.ForeignKey(
+        "courses.FileAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
 
     class Meta:
         db_table = "assignments_homework"

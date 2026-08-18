@@ -151,6 +151,30 @@ export const mentorApi = {
     }),
   remove: (groupId, studentId) =>
     api.post(`/mentor/groups/${groupId}/students/${studentId}/remove/`),
+  // Vazifa yuborish
+  homework: (lessonId) => api.get(`/mentor/lessons/${lessonId}/homework/`),
+  sendHomework: (lessonId, { instructions, deadlineAt, maxScore = 100, materialId } = {}) =>
+    api.post(`/mentor/lessons/${lessonId}/homework/`, {
+      instructions: { uz: instructions },
+      deadline_at: deadlineAt || null,
+      max_score: maxScore,
+      material_id: materialId || null,
+    }),
+  groupLeaderboard: (groupId) => api.get(`/mentor/groups/${groupId}/leaderboard/`),
+};
+
+export const studentApi = {
+  myAssignments: () => api.get("/assignments/mine/"),
+  submitAssignment: (lessonId, { file, text = "", link = "" } = {}) => {
+    const form = new FormData();
+    if (file) form.append("file", file);
+    form.append("text", text);
+    form.append("link", link);
+    return api.post(`/assignments/${lessonId}/submissions/`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  leaderboard: () => api.get("/groups/leaderboard/"),
 };
 
 export const managerApi = {

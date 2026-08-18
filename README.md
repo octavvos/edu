@@ -134,6 +134,21 @@ yuborilgan → tekshirilmoqda → qayta ishlashga qaytarildi → qabul qilindi
 - Kechikkan topshiriqlar navbatning tepasida va alohida belgi bilan ko'rinadi.
 - Boshqa mentorning topshirig'ini tekshirish 403 bilan rad etiladi.
 
+**Vazifa yuborish** — mentor kurs sillabusida (`/mentor/courses/{id}`) "Uy
+vazifasi" turidagi darsga vazifa biriktiradi (`POST
+/mentor/lessons/{lesson_id}/homework/`, `content.manage` huquqi): vazifa
+matni, muddat, max ball va — ixtiyoriy ravishda — shu darsning
+materiallaridan biri (**taqdimot** yoki **vazifa** fayli) biriktiriladi.
+Yuborilgach, kursga faol yozilgan barcha o'quvchilarga "Vazifalarim"
+bo'limida darhol ko'rinadi (`Homework` yozuvi mavjudligining o'zi —
+ko'rinish belgisi). Qayta yuborish mavjud vazifani yangilaydi (dublikat
+yaratilmaydi).
+
+O'quvchi vazifani **ZIP yoki PDF** faylida topshiradi, GitHub havolasi
+ixtiyoriy (`apps/assignments/constants.py`: ruxsat etilgan kengaytmalar,
+max 50 MB). Boshqa kengaytma yoki hajmdan oshgan fayl 400 xato bilan rad
+etiladi.
+
 **O'quvchilar monitoringi** (`/mentor/students`) — progress, oxirgi kirgan
 vaqt va tekshirilmagan topshiriqlar. "Xavf ostida" mezonlari
 (`apps/groups/monitoring.py` da o'zgartiriladi):
@@ -208,6 +223,34 @@ ko'rsatiladi. Materialga bosilganda yangi brauzer tabi ochilmaydi —
 sahifaning o'zida o'rtachadan kattaroq preview oynasida ochiladi (PDF/rasm
 ichida ko'rinadi, boshqa turlar uchun "Yangi oynada ochish" tugmasi bor;
 `components/mentor/MaterialLink.js`).
+
+## O'quvchi paneli
+
+O'quvchi (mentor/manager bo'lmagan foydalanuvchi) uchun 3 ta sahifa:
+
+| Sahifa | Yo'l | Nima ko'rsatadi |
+|--------|------|-----------------|
+| Kabinetim | `/dashboard` | Guruhi, dars jadvali, kurslari |
+| Vazifalarim | `/assignments` | Mentor yuborgan vazifalar — matn, biriktirilgan material, topshirish formasi (ZIP/PDF + ixtiyoriy GitHub havolasi), baholangandan keyin ball va izoh |
+| Reyting | `/leaderboard` | O'z guruhining reytingi (pastga qarang) |
+
+`GET /api/v1/assignments/mine/` — o'quvchiga yuborilgan barcha vazifalar,
+har biriga o'zining topshirig'i (bo'lsa) va bahosi biriktirilgan holda.
+Topshirish: `POST /api/v1/assignments/{lesson_id}/submissions/` — qayta
+yuborish mavjud topshiriqni yangilaydi (upsert), "qabul qilindi"
+holatidagi vazifada forma yashiriladi.
+
+## Guruh reytingi
+
+Mentor baholagan har bir ish o'quvchining umumiy hisobiga **qo'shiladi**
+(o'rtacha emas, yig'indi) — ball hech qachon kamaymaydi, faqat oshadi.
+Guruhdagi barcha faol o'quvchilar shu yig'indi bo'yicha tartiblanadi
+(`apps/groups/leaderboard.py::get_group_leaderboard`):
+
+- Mentor: `GET /api/v1/mentor/groups/{group_id}/leaderboard/` (`/mentor/leaderboard`, guruh tanlash bilan)
+- O'quvchi: `GET /api/v1/groups/leaderboard/` (`/leaderboard` — faqat o'z guruhi)
+
+Hali baholanmagan o'quvchilar ham 0 ball bilan ro'yxatda ko'rinadi (pastda).
 
 ## Lokal ishga tushirish (Docker'siz)
 

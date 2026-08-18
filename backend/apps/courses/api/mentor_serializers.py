@@ -14,16 +14,20 @@ class MentorLessonSerializer(serializers.ModelSerializer):
     materials = FileAssetSerializer(many=True, read_only=True)
     video_asset = VideoAssetSerializer(read_only=True)
     quiz_id = serializers.SerializerMethodField()
+    homework_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
         fields = (
             "id", "type", "title", "text_content", "order", "is_required",
-            "is_free_preview", "materials", "video_asset", "quiz_id",
+            "is_free_preview", "materials", "video_asset", "quiz_id", "homework_id",
         )
 
     def get_quiz_id(self, obj) -> str | None:
         return str(obj.quiz.id) if hasattr(obj, "quiz") else None
+
+    def get_homework_id(self, obj) -> str | None:
+        return str(obj.homework.id) if hasattr(obj, "homework") else None
 
 
 class MentorModuleSerializer(serializers.ModelSerializer):

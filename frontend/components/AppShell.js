@@ -25,9 +25,12 @@ export default function AppShell({ user, children, narrow = false }) {
     links.push({ href: "/mentor/homework", label: "Uy vazifalari" });
     links.push({ href: "/mentor/students", label: "O'quvchilar" });
     links.push({ href: "/mentor/groups", label: "Guruhlarim" });
+    links.push({ href: "/mentor/leaderboard", label: "Reyting" });
   }
   if (!hasRole(user, "manager") && !hasRole(user, "mentor")) {
     links.push({ href: "/dashboard", label: "Kabinetim" });
+    links.push({ href: "/assignments", label: "Vazifalarim" });
+    links.push({ href: "/leaderboard", label: "Reyting" });
   }
 
   const primaryRole = user?.roles?.[0];

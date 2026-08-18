@@ -9,4 +9,5 @@ urlpatterns = [
     path("open/", views.OpenGroupListView.as_view(), name="groups-open"),
     # O'quvchining o'z guruhi
     path("my/", views.MyGroupView.as_view(), name="groups-my"),
+    path("leaderboard/", views.MyLeaderboardView.as_view(), name="groups-leaderboard"),
 ]

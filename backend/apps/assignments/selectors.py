@@ -1,7 +1,7 @@
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.assignments.models import Submission, SubmissionStatus
+from apps.assignments.models import Homework, Submission, SubmissionStatus
 
 
 def get_mentor_queue(mentor, *, status: str = "", group_id=None):
@@ -85,6 +85,35 @@ def get_user_submissions(*, user, course):
     ).select_related("homework", "grade")
 
 
+def get_my_assignments(user):
+    """
+    O'quvchining faol yozilgan kurslaridagi barcha yuborilgan (mentor
+    Homework yaratgan) uy vazifalari. Har bir Homework'ga o'quvchining
+    o'z Submission'i (mavjud bo'lsa, `grade` bilan) `_my_submission`
+    sifatida biriktiriladi — `MyAssignmentSerializer` shundan foydalanadi.
+    """
+    from apps.enrollment.models import Enrollment, EnrollmentStatus
+
+    course_ids = Enrollment.objects.filter(
+        user=user, status=EnrollmentStatus.ACTIVE,
+    ).values_list("course_id", flat=True)
+
+    homeworks = list(
+        Homework.objects.filter(lesson__module__course_id__in=course_ids)
+        .select_related("lesson", "lesson__module", "material")
+        .order_by("-created_at"),
+    )
+    submissions = {
+        s.homework_id: s
+        for s in Submission.objects.filter(
+            user=user, homework_id__in=[hw.id for hw in homeworks],
+        ).select_related("grade")
+    }
+    for hw in homeworks:
+        hw._my_submission = submissions.get(hw.id)
+    return homeworks
+
+
 def count_overdue_for(user) -> int:
     """Deadline'i o'tgan, lekin hali qabul qilinmagan topshiriqlar soni."""
     return Submission.objects.filter(
@@ -98,8 +127,6 @@ def count_pending_review_for(mentor) -> int:
 
 def has_missed_deadline(user) -> bool:
     """Topshirilmagan, muddati o'tgan uy vazifasi bormi."""
-    from apps.assignments.models import Homework
-
     now = timezone.now()
     submitted_ids = Submission.objects.filter(user=user).values_list("homework_id", flat=True)
     return Homework.objects.filter(

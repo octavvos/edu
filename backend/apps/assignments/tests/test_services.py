@@ -3,13 +3,15 @@
 from datetime import timedelta
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
 from apps.accounts.tests.factories import PendingUserFactory, UserFactory
 from apps.assignments import services
-from apps.assignments.models import SubmissionStatus
-from apps.assignments.tests.factories import HomeworkFactory
+from apps.assignments.models import Homework, SubmissionStatus
+from apps.assignments.tests.factories import HomeworkFactory, LessonFactory
 from apps.core.exceptions import DomainError
+from apps.courses import services as course_services
 from apps.enrollment.selectors import get_enrollment
 from apps.groups import services as group_services
 from apps.groups.tests.factories import GroupFactory
@@ -228,3 +230,146 @@ def test_mentor_queue_puts_late_submissions_first():
     late = _submit(student, group, deadline_at=timezone.now() - timedelta(days=2))
 
     assert get_mentor_queue(mentor).first() == late
+
+
+# ---------------------------------------------------------------------------
+# Vazifa yuborish (mentor -> o'quvchi)
+# ---------------------------------------------------------------------------
+
+def test_send_homework_creates_it_for_own_lesson():
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+
+    homework = services.send_homework(
+        mentor=mentor, lesson=lesson, instructions={"uz": "PDF shaklida topshiring"}, max_score=50,
+    )
+
+    assert homework.lesson_id == lesson.id
+    assert homework.max_score == 50
+    assert Homework.objects.filter(lesson=lesson).count() == 1
+
+
+def test_send_homework_twice_updates_instead_of_duplicating():
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+
+    services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "V1"}, max_score=100)
+    updated = services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "V2"}, max_score=80)
+
+    assert Homework.objects.filter(lesson=lesson).count() == 1
+    assert updated.max_score == 80
+    assert updated.instructions["uz"] == "V2"
+
+
+def test_send_homework_rejected_for_unrelated_mentor():
+    mentor = UserFactory()
+    outsider = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+
+    with pytest.raises(DomainError) as exc:
+        services.send_homework(mentor=outsider, lesson=lesson, instructions={"uz": "V1"})
+    assert exc.value.status_code == 403
+
+
+def test_send_homework_with_material_from_same_lesson():
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    material = course_services.add_file_material(
+        lesson=lesson, file=SimpleUploadedFile("slayd.pdf", b"%PDF-1.4"),
+        title="Slaydlar", kind="presentation",
+    )
+
+    homework = services.send_homework(
+        mentor=mentor, lesson=lesson, instructions={"uz": "Slaydni ko'rib chiqing"}, material=material,
+    )
+
+    assert homework.material_id == material.id
+
+
+def test_send_homework_rejects_material_from_another_lesson():
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    other_lesson = LessonFactory(module__course=group.course)
+    material = course_services.add_file_material(
+        lesson=other_lesson, file=SimpleUploadedFile("slayd.pdf", b"%PDF-1.4"),
+        title="Slaydlar", kind="presentation",
+    )
+
+    with pytest.raises(DomainError) as exc:
+        services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "V1"}, material=material)
+    assert exc.value.code == "material_mismatch"
+
+
+# ---------------------------------------------------------------------------
+# O'quvchiga ko'rinadigan vazifalar ro'yxati
+# ---------------------------------------------------------------------------
+
+def test_get_my_assignments_shows_sent_homework_with_own_submission():
+    from apps.assignments.selectors import get_my_assignments
+
+    mentor = UserFactory()
+    student, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "Bajaring"})
+
+    rows = get_my_assignments(student)
+    assert len(rows) == 1
+    assert rows[0]._my_submission is None
+
+    submission = _submit(student, group)  # boshqa (avtomatik) homework uchun emas, alohida
+    # `_submit` o'zining Homework'ini yaratadi — shu darsga tegishli topshiriqni tekshiramiz
+    rows_after = get_my_assignments(student)
+    matching = [r for r in rows_after if r.id == submission.homework_id][0]
+    assert matching._my_submission.id == submission.id
+
+
+def test_get_my_assignments_empty_for_unrelated_student():
+    from apps.assignments.selectors import get_my_assignments
+
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "Bajaring"})
+
+    outsider = UserFactory()
+    assert get_my_assignments(outsider) == []
+
+
+# ---------------------------------------------------------------------------
+# Topshiriq fayli validatsiyasi (zip/pdf, hajm)
+# ---------------------------------------------------------------------------
+
+def test_submission_serializer_rejects_disallowed_extension():
+    from apps.assignments.api.serializers import SubmissionCreateSerializer
+
+    upload = SimpleUploadedFile("hisobot.docx", b"fake", content_type="application/octet-stream")
+    serializer = SubmissionCreateSerializer(data={"file": upload})
+
+    assert not serializer.is_valid()
+    assert "file" in serializer.errors
+
+
+@pytest.mark.parametrize("filename", ["ish.zip", "hisobot.pdf"])
+def test_submission_serializer_accepts_zip_and_pdf(filename):
+    from apps.assignments.api.serializers import SubmissionCreateSerializer
+
+    upload = SimpleUploadedFile(filename, b"fake content")
+    serializer = SubmissionCreateSerializer(data={"file": upload})
+
+    assert serializer.is_valid(), serializer.errors
+
+
+def test_submission_serializer_rejects_oversized_file():
+    from apps.assignments.api.serializers import SubmissionCreateSerializer
+    from apps.assignments.constants import MAX_SUBMISSION_SIZE_BYTES
+
+    oversized = SimpleUploadedFile("ish.zip", b"x" * (MAX_SUBMISSION_SIZE_BYTES + 1))
+    serializer = SubmissionCreateSerializer(data={"file": oversized})
+
+    assert not serializer.is_valid()
+    assert "file" in serializer.errors

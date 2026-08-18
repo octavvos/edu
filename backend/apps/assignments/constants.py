@@ -1,0 +1,5 @@
+"""Uy vazifasi topshirish bo'yicha cheklovlar — H-01."""
+
+ALLOWED_SUBMISSION_EXTENSIONS = {"zip", "pdf"}
+MAX_SUBMISSION_SIZE_MB = 50
+MAX_SUBMISSION_SIZE_BYTES = MAX_SUBMISSION_SIZE_MB * 1024 * 1024

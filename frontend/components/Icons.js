@@ -136,3 +136,18 @@ export const Hourglass = (p) => (
     <path d="M7 22v-3.5a5 5 0 0 1 2.5-4.3L12 13l2.5 1.2a5 5 0 0 1 2.5 4.3V22" />
   </svg>
 );
+
+export const Send = (p) => (
+  <svg {...base} {...p}>
+    <path d="m22 2-20 7 8.5 3.5L14 21l8-19Z" />
+    <path d="M10.5 12.5 22 2" />
+  </svg>
+);
+
+export const Trophy = (p) => (
+  <svg {...base} {...p}>
+    <path d="M8 21h8M12 17v4" />
+    <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+    <path d="M7 5H4a3 3 0 0 0 3 4M17 5h3a3 3 0 0 1-3 4" />
+  </svg>
+);
