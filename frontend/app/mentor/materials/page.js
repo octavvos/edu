@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
-import { Book, ChevronDown, ChevronRight, FileText, Upload } from "../../../components/Icons";
+import { Book, Check, ChevronDown, ChevronRight, FileText, Upload } from "../../../components/Icons";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth";
 
@@ -14,11 +14,12 @@ const LESSON_TYPE_LABEL = {
   homework: "Uy vazifasi",
 };
 
-/** Barcha dars rejalar bittalab ro'yxatda — har biriga material yuklash tugmasi bilan. */
+/** Chap: ixcham dars ro'yxati. O'ng: tanlangan darsning materiali doim ko'rinadi. */
 export default function MentorMaterialsPage() {
   const { user, loading } = useAuth({ roles: ["mentor"] });
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [message, setMessage] = useState(null);
 
@@ -42,17 +43,17 @@ export default function MentorMaterialsPage() {
   }
 
   const course = courses.find((c) => c.id === courseId);
-  const totalLessons = course?.modules.reduce((sum, m) => sum + m.lessons.length, 0) || 0;
-  const uploadedCount = course?.modules.reduce(
-    (sum, m) => sum + m.lessons.filter((l) => l.file_asset).length, 0,
-  ) || 0;
+  const allLessons = course?.modules.flatMap((m) => m.lessons.map((l) => ({ ...l, moduleTitle: m.title }))) || [];
+  const totalLessons = allLessons.length;
+  const uploadedCount = allLessons.filter((l) => l.file_asset).length;
+  const selected = allLessons.find((l) => l.id === selectedId) || null;
 
   return (
     <AppShell user={user}>
       <div className="page-head">
         <div>
           <h1>Materiallar</h1>
-          <p>Har bir dars rejasiga fayl material yuklang</p>
+          <p>Darsni tanlang — materialni o&apos;ng tomonda yuklaysiz</p>
         </div>
         {course && (
           <span className="badge badge-info">
@@ -81,7 +82,7 @@ export default function MentorMaterialsPage() {
                 <button
                   key={c.id}
                   className={`btn btn-sm ${c.id === courseId ? "" : "btn-ghost"}`}
-                  onClick={() => setCourseId(c.id)}
+                  onClick={() => { setCourseId(c.id); setSelectedId(null); }}
                 >
                   {c.title}
                 </button>
@@ -90,57 +91,123 @@ export default function MentorMaterialsPage() {
           )}
 
           {course && (
-            <div className="stack" style={{ gap: 10 }}>
-              {course.modules.map((module) => (
-                <ModuleMaterials key={module.id} module={module} onChanged={load} onError={setMessage} />
-              ))}
+            <div className="materials-layout">
+              <div className="materials-list-pane">
+                {course.modules.map((module) => (
+                  <ModuleList
+                    key={module.id}
+                    module={module}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                  />
+                ))}
+              </div>
+
+              <div className="materials-detail-pane">
+                {selected ? (
+                  <MaterialPanel key={selected.id} lesson={selected} onChanged={load} onError={setMessage} />
+                ) : (
+                  <div className="card center" style={{ padding: 40 }}>
+                    <div className="empty-icon" style={{ margin: "0 auto 12px" }}><FileText /></div>
+                    <p className="muted">Chapdan darsni tanlang</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </>
       )}
+
+      <style jsx>{`
+        .materials-layout {
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+        }
+        .materials-list-pane {
+          flex: 0 0 320px;
+          max-width: 320px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .materials-detail-pane {
+          flex: 1;
+          min-width: 0;
+          position: sticky;
+          top: 80px;
+        }
+        @media (max-width: 800px) {
+          .materials-layout { flex-direction: column; }
+          .materials-list-pane { max-width: 100%; flex-basis: auto; }
+          .materials-detail-pane { position: static; width: 100%; }
+        }
+      `}</style>
     </AppShell>
   );
 }
 
-function ModuleMaterials({ module, onChanged, onError }) {
-  const [open, setOpen] = useState(true);
+// ---------------------------------------------------------------------------
+
+function ModuleList({ module, selectedId, onSelect }) {
+  const [open, setOpen] = useState(false);
   const uploaded = module.lessons.filter((l) => l.file_asset).length;
 
   return (
-    <section className="card">
+    <div className="card" style={{ padding: 10 }}>
       <button
         className="row-between"
-        style={{ width: "100%", background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}
+        style={{ width: "100%", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", textAlign: "left" }}
         onClick={() => setOpen((v) => !v)}
       >
-        <div className="row" style={{ gap: 8 }}>
-          {open ? <ChevronDown width={16} height={16} /> : <ChevronRight width={16} height={16} />}
-          <strong>{module.title}</strong>
+        <div className="row" style={{ gap: 6 }}>
+          {open ? <ChevronDown width={14} height={14} /> : <ChevronRight width={14} height={14} />}
+          <span className="small strong">{module.title}</span>
         </div>
-        <span className="chip">{uploaded} / {module.lessons.length} darsda material</span>
+        <span className="chip" style={{ fontSize: 11 }}>{uploaded}/{module.lessons.length}</span>
       </button>
 
       {open && (
-        <div className="stack mt-2" style={{ gap: 6 }}>
-          {module.lessons.length === 0 ? (
-            <p className="small dim">Bu bo&apos;limda dars yo&apos;q.</p>
-          ) : (
-            module.lessons.map((lesson) => (
-              <MaterialRow key={lesson.id} lesson={lesson} onChanged={onChanged} onError={onError} />
-            ))
-          )}
+        <div className="stack mt-1" style={{ gap: 2 }}>
+          {module.lessons.map((lesson) => {
+            const active = lesson.id === selectedId;
+            return (
+              <button
+                key={lesson.id}
+                onClick={() => onSelect(lesson.id)}
+                className="row-between"
+                style={{
+                  width: "100%", textAlign: "left", padding: "7px 8px", borderRadius: "var(--radius-sm)",
+                  border: "none", cursor: "pointer", gap: 6,
+                  background: active ? "var(--primary-soft)" : "transparent",
+                  color: active ? "var(--primary)" : "var(--text)",
+                }}
+              >
+                <span className="small" style={{
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  fontWeight: active ? 600 : 400,
+                }}>
+                  {lesson.title}
+                </span>
+                {lesson.file_asset && (
+                  <Check width={13} height={13} style={{ flexShrink: 0, color: "var(--success)" }} />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
-function MaterialRow({ lesson, onChanged, onError }) {
-  const [uploading, setUploading] = useState(false);
+// ---------------------------------------------------------------------------
 
-  async function handleFileChange(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
+function MaterialPanel({ lesson, onChanged, onError }) {
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  async function upload(file) {
     if (!file) return;
     setUploading(true);
     try {
@@ -153,36 +220,73 @@ function MaterialRow({ lesson, onChanged, onError }) {
     }
   }
 
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    upload(e.dataTransfer.files?.[0]);
+  }
+
   return (
-    <div className="row-between" style={{
-      padding: "10px 13px", background: "var(--bg-subtle)", borderRadius: "var(--radius)",
-      gap: 10, flexWrap: "wrap",
-    }}>
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div className="row" style={{ gap: 8 }}>
-          <span className="badge badge-neutral">{LESSON_TYPE_LABEL[lesson.type] || lesson.type}</span>
-          <span className="small strong">{lesson.title}</span>
-        </div>
-        {lesson.file_asset && (
-          <a
-            href={lesson.file_asset.file}
-            target="_blank"
-            rel="noreferrer"
-            className="row mt-1 small"
-            style={{ gap: 5, color: "var(--text-secondary)" }}
-          >
-            <FileText width={13} height={13} />
-            {lesson.file_asset.original_filename}
-            <span className="dim">({formatSize(lesson.file_asset.size_bytes)})</span>
-          </a>
+    <div className="card fade-in">
+      <div className="row" style={{ gap: 8 }}>
+        <span className="badge badge-neutral">{LESSON_TYPE_LABEL[lesson.type] || lesson.type}</span>
+        <span className="chip">{lesson.moduleTitle}</span>
+      </div>
+      <h3 className="mt-2">{lesson.title}</h3>
+
+      {lesson.text_content && <p className="small muted mt-2">{lesson.text_content}</p>}
+
+      <div
+        className="mt-3"
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        style={{
+          border: `1.5px dashed ${dragOver ? "var(--primary)" : "var(--border-strong)"}`,
+          borderRadius: "var(--radius)",
+          padding: 22,
+          textAlign: "center",
+          background: dragOver ? "var(--primary-soft)" : "var(--bg-subtle)",
+          transition: "border-color 0.15s, background 0.15s",
+        }}
+      >
+        {lesson.file_asset ? (
+          <>
+            <a
+              href={lesson.file_asset.file}
+              target="_blank"
+              rel="noreferrer"
+              className="row"
+              style={{ gap: 7, justifyContent: "center", color: "var(--text)" }}
+            >
+              <FileText width={18} height={18} />
+              <span className="strong">{lesson.file_asset.original_filename}</span>
+            </a>
+            <p className="small dim mt-1">{formatSize(lesson.file_asset.size_bytes)}</p>
+          </>
+        ) : (
+          <>
+            <Upload width={22} height={22} className="dim" style={{ marginBottom: 6 }} />
+            <p className="small muted">Faylni shu yerga tashlang yoki tanlang</p>
+          </>
         )}
+
+        <label className={`btn btn-sm mt-3 ${lesson.file_asset ? "btn-ghost" : ""}`} style={{ cursor: "pointer" }}>
+          {uploading ? <span className="spinner" /> : <Upload width={14} height={14} />}
+          {lesson.file_asset ? "Almashtirish" : "Fayl tanlash"}
+          <input
+            type="file"
+            onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ""; }}
+            style={{ display: "none" }}
+            disabled={uploading}
+          />
+        </label>
       </div>
 
-      <label className={`btn btn-sm ${lesson.file_asset ? "btn-ghost" : ""}`} style={{ cursor: "pointer" }}>
-        {uploading ? <span className="spinner" /> : <Upload width={14} height={14} />}
-        {lesson.file_asset ? "Almashtirish" : "Material yuklash"}
-        <input type="file" onChange={handleFileChange} style={{ display: "none" }} disabled={uploading} />
-      </label>
+      <div className="alert alert-info mt-3" style={{ marginBottom: 0 }}>
+        Tavsiya: PDF, PPTX, DOCX yoki ZIP — o&apos;quvchi to&apos;g&apos;ridan-to&apos;g&apos;ri
+        yuklab olib ochadi. Video darsni Bunny Stream orqali alohida yuklash tavsiya etiladi.
+      </div>
     </div>
   );
 }
