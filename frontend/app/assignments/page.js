@@ -120,6 +120,30 @@ function AssignmentCard({ row, onChanged, onError }) {
         </a>
       )}
 
+      {submission && (submission.file || submission.link || submission.text) && (
+        <div className="mt-2" style={{
+          padding: "11px 13px", background: "var(--bg-subtle)",
+          borderRadius: "var(--radius)", fontSize: 14,
+        }}>
+          <div className="stat-label mb-1">
+            Topshirganingiz · {new Date(submission.submitted_at).toLocaleString("uz-UZ")}
+          </div>
+          {submission.text && <p>{submission.text}</p>}
+          <div className="row" style={{ gap: 12 }}>
+            {submission.file && (
+              <a href={submission.file} target="_blank" rel="noreferrer" className="small">
+                Yuklangan fayl
+              </a>
+            )}
+            {submission.link && (
+              <a href={submission.link} target="_blank" rel="noreferrer" className="small">
+                {submission.link}
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       {submission?.grade?.feedback && (
         <div className="alert alert-info mt-2" style={{ marginBottom: 0 }}>
           <strong>Mentor izohi:</strong> {submission.grade.feedback}
