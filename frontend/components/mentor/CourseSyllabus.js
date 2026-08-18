@@ -211,7 +211,9 @@ function LessonRow({ lesson, onChanged, onError }) {
           ))}
         </button>
 
+        {/* Vazifa istalgan darsga jo'natilishi mumkin — dars turi bilan bog'liq emas */}
         <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+          <HomeworkSendModal lesson={lesson} sentGroups={lesson.sent_to_groups || []} onSent={onChanged} />
           {lesson.type === "quiz" ? (
             lesson.quiz_id ? (
               <button className="btn btn-ghost btn-sm" onClick={() => setQuizOpen((v) => !v)}>
@@ -224,15 +226,6 @@ function LessonRow({ lesson, onChanged, onError }) {
                 Test ochish
               </button>
             )
-          ) : lesson.type === "homework" ? (
-            <>
-              <HomeworkSendModal lesson={lesson} sentGroups={lesson.sent_to_groups || []} onSent={onChanged} />
-              <MaterialUploadModal
-                lessonId={lesson.id}
-                label={lesson.materials?.length > 0 ? "Yana fayl qo'shish" : "Material yuklash"}
-                onUploaded={onChanged}
-              />
-            </>
           ) : (
             <MaterialUploadModal
               lessonId={lesson.id}
