@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
 import { Book, Check, ChevronDown, ChevronRight, FileText, X } from "../../../components/Icons";
+import MaterialLink from "../../../components/mentor/MaterialLink";
 import MaterialUploadModal from "../../../components/mentor/MaterialUploadModal";
 import { errorMessage, mentorApi } from "../../../lib/api";
-import { MATERIAL_KIND_LABEL, MAX_MATERIAL_SIZE_MB } from "../../../lib/materials";
+import { MATERIAL_KIND_LABEL, MAX_MATERIAL_SIZE_MB, formatFileSize } from "../../../lib/materials";
 import { useAuth } from "../../../lib/auth";
 
 const LESSON_TYPE_LABEL = {
@@ -244,10 +245,8 @@ function MaterialPanel({ lesson, onChanged, onError }) {
               className="row-between"
               style={{ padding: "9px 12px", background: "var(--bg-subtle)", borderRadius: "var(--radius)" }}
             >
-              <a
-                href={material.file}
-                target="_blank"
-                rel="noreferrer"
+              <MaterialLink
+                material={material}
                 className="row small"
                 style={{ gap: 7, color: "var(--text)", minWidth: 0 }}
               >
@@ -267,8 +266,8 @@ function MaterialPanel({ lesson, onChanged, onError }) {
                     </span>
                   )}
                 </span>
-                <span className="dim" style={{ flexShrink: 0 }}>({formatSize(material.size_bytes)})</span>
-              </a>
+                <span className="dim" style={{ flexShrink: 0 }}>({formatFileSize(material.size_bytes)})</span>
+              </MaterialLink>
               <button
                 className="btn btn-danger-ghost btn-sm"
                 onClick={() => handleDelete(material)}
@@ -296,10 +295,4 @@ function MaterialPanel({ lesson, onChanged, onError }) {
       </div>
     </div>
   );
-}
-
-function formatSize(bytes) {
-  if (!bytes) return "0 KB";
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

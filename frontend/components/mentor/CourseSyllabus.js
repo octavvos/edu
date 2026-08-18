@@ -5,7 +5,8 @@ import {
   Check, ChevronDown, ChevronRight, FileText, HelpCircle, Plus, X,
 } from "../Icons";
 import { errorMessage, mentorApi } from "../../lib/api";
-import { MATERIAL_KIND_LABEL } from "../../lib/materials";
+import { MATERIAL_KIND_LABEL, formatFileSize } from "../../lib/materials";
+import MaterialLink from "./MaterialLink";
 import MaterialUploadModal from "./MaterialUploadModal";
 
 const LESSON_TYPES = [
@@ -236,11 +237,9 @@ function LessonRow({ lesson, onChanged, onError }) {
       {lesson.materials?.length > 0 && (
         <div className="stack mt-2" style={{ gap: 4 }}>
           {lesson.materials.map((material) => (
-            <a
+            <MaterialLink
               key={material.id}
-              href={material.file}
-              target="_blank"
-              rel="noreferrer"
+              material={material}
               className="row small"
               style={{ gap: 6, color: "var(--text-secondary)" }}
             >
@@ -249,8 +248,8 @@ function LessonRow({ lesson, onChanged, onError }) {
               <span className="chip" style={{ fontSize: 11 }}>
                 {MATERIAL_KIND_LABEL[material.kind] || material.kind}
               </span>
-              <span className="dim">({formatSize(material.size_bytes)})</span>
-            </a>
+              <span className="dim">({formatFileSize(material.size_bytes)})</span>
+            </MaterialLink>
           ))}
         </div>
       )}
@@ -264,12 +263,6 @@ function LessonRow({ lesson, onChanged, onError }) {
 
 function typeLabel(type) {
   return LESSON_TYPES.find((t) => t.value === type)?.label || type;
-}
-
-function formatSize(bytes) {
-  if (!bytes) return "0 KB";
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // ---------------------------------------------------------------------------

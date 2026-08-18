@@ -16,6 +16,15 @@ export const MATERIAL_KIND_OPTIONS = [
 ];
 export const MATERIAL_KIND_LABEL = Object.fromEntries(MATERIAL_KIND_OPTIONS.map((o) => [o.value, o.label]));
 
+/** Fayl kengaytmasi asosida brauzerda ko'rsatib bo'ladigan turlar (preview modal uchun). */
+export const PREVIEWABLE_MATERIAL_EXTENSIONS = ["pdf", "png", "jpg", "jpeg", "gif"];
+
+export function formatFileSize(bytes) {
+  if (!bytes) return "0 KB";
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /** Yuklashdan oldin tekshiradi — noto'g'ri bo'lsa xabar qaytaradi, to'g'ri bo'lsa null. */
 export function validateMaterialFile(file) {
   const ext = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
