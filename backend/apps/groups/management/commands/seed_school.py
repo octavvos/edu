@@ -25,6 +25,9 @@ from apps.rbac.services import assign_role_by_codename
 MENTOR_USERNAME = "Anvarjon"
 MENTOR_PASSWORD = "light"
 
+MANAGER_USERNAME = "manager"
+MANAGER_PASSWORD = "light"
+
 COURSE_SLUG = "dasturlash"
 COURSE_MODULES = ["Scratch", "Python", "PostgreSQL", "Django"]
 
@@ -55,12 +58,14 @@ class Command(BaseCommand):
         if options["purge"]:
             self._purge()
 
-        mentor = self._ensure_mentor()
-        course = self._ensure_course()
-        self._ensure_groups(course, mentor)
+        mentor = self._ensure_user(MENTOR_USERNAME, MENTOR_PASSWORD, "mentor", "Anvarjon")
+        manager = self._ensure_user(MANAGER_USERNAME, MANAGER_PASSWORD, "manager", "Manager")
+        course = self._ensure_course(author=manager)
+        self._ensure_groups(course, mentor, manager)
 
         self.stdout.write(self.style.SUCCESS(
             f"\nTayyor.\n"
+            f"  Manager: {MANAGER_USERNAME} / {MANAGER_PASSWORD}\n"
             f"  Mentor:  {MENTOR_USERNAME} / {MENTOR_PASSWORD}\n"
             f"  Kurs:    Dasturlash ({', '.join(COURSE_MODULES)})\n"
             f"  Guruhlar: " + ", ".join(
@@ -110,29 +115,26 @@ class Command(BaseCommand):
 
     # -- Yaratish ----------------------------------------------------------
 
-    def _ensure_mentor(self) -> User:
-        mentor, created = User.objects.get_or_create(
-            username=MENTOR_USERNAME,
+    def _ensure_user(self, username: str, password: str, role: str, display: str) -> User:
+        user, _ = User.objects.get_or_create(
+            username=username,
             defaults={
-                "first_name": "Anvarjon",
-                "full_name": "Anvarjon",
+                "first_name": display,
+                "full_name": display,
                 "status": UserStatus.ACTIVE,
             },
         )
-        mentor.set_password(MENTOR_PASSWORD)
-        mentor.status = UserStatus.ACTIVE
-        mentor.save(update_fields=["password", "status", "updated_at"])
-        assign_role_by_codename(user=mentor, codename="mentor")
-        return mentor
+        user.set_password(password)
+        user.status = UserStatus.ACTIVE
+        user.save(update_fields=["password", "status", "updated_at"])
+        assign_role_by_codename(user=user, codename=role)
+        return user
 
-    def _ensure_course(self) -> Course:
+    def _ensure_course(self, *, author: User) -> Course:
         category, _ = Category.objects.get_or_create(
             slug="dasturlash",
             defaults={"name": {"uz": "Dasturlash", "ru": "Программирование"}},
         )
-        # Kurs muallifi sifatida mentor ishlatiladi (Course.author majburiy)
-        author = User.objects.get(username=MENTOR_USERNAME)
-
         course, _ = Course.objects.get_or_create(
             slug=COURSE_SLUG,
             defaults={
@@ -155,7 +157,7 @@ class Command(BaseCommand):
             )
         return course
 
-    def _ensure_groups(self, course: Course, mentor: User):
+    def _ensure_groups(self, course: Course, mentor: User, manager: User):
         for code, start, end in GROUPS:
             group, _ = Group.objects.get_or_create(
                 code=code.lower(),
@@ -163,6 +165,7 @@ class Command(BaseCommand):
                     "course": course,
                     "name": code,
                     "mentor": mentor,
+                    "created_by": manager,
                     "capacity": 25,
                 },
             )

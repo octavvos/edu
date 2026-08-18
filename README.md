@@ -79,7 +79,8 @@ docker compose exec backend python manage.py createsuperuser
 
 `seed_school` quyidagilarni o'rnatadi (idempotent):
 
-- **Mentor**: `Anvarjon` / `light`
+- **Manager**: `manager` / `light` — kurs va guruhlarni boshqaradi
+- **Mentor**: `Anvarjon` / `light` — so'rovlarni tasdiqlaydi
 - **Kurs**: Dasturlash — Scratch, Python, PostgreSQL, Django modullari
 - **Guruhlar** (dushanba, chorshanba, juma):
 
