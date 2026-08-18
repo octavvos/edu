@@ -3,18 +3,19 @@
 import { useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
 import { Users } from "../../../components/Icons";
+import { useNotify } from "../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { initials, useAuth } from "../../../lib/auth";
 
 /** O'quvchilar monitoringi: progress, oxirgi faollik va xavf ostidagilar. */
 export default function MentorStudentsPage() {
   const { user, loading } = useAuth({ roles: ["mentor"] });
+  const notify = useNotify();
   const [data, setData] = useState({ results: [], at_risk_count: 0, total: 0 });
   const [groups, setGroups] = useState([]);
   const [groupId, setGroupId] = useState("");
   const [onlyRisk, setOnlyRisk] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
 
   useEffect(() => {
     if (loading) return;
@@ -27,9 +28,9 @@ export default function MentorStudentsPage() {
     mentorApi
       .students(groupId ? { group: groupId } : {})
       .then(({ data: payload }) => setData(payload))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, [loading, groupId]);
+  }, [loading, groupId, notify]);
 
   if (loading) {
     return <div className="app-shell"><main><div className="skeleton" style={{ height: 200 }} /></main></div>;
@@ -45,8 +46,6 @@ export default function MentorStudentsPage() {
           <p>Progress, faollik va e&apos;tibor talab qiladigan o&apos;quvchilar</p>
         </div>
       </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
       <div className="stats mb-3">
         <div className="stat">

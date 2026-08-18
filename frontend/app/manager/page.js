@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../components/AppShell";
 import { Calendar, Plus, Users, X } from "../../components/Icons";
+import { useNotify } from "../../components/NotificationProvider";
 import { catalogApi, errorMessage, managerApi } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 
@@ -19,10 +20,10 @@ const WEEKDAYS = [
 /** Manager paneli: kurs guruhlarini ochish va dars vaqtlarini belgilash. */
 export default function ManagerPage() {
   const { user, loading } = useAuth({ roles: ["manager"] });
+  const notify = useNotify();
   const [groups, setGroups] = useState([]);
   const [courses, setCourses] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
   const [creating, setCreating] = useState(false);
   const [scheduleFor, setScheduleFor] = useState(null);
 
@@ -30,8 +31,8 @@ export default function ManagerPage() {
     return managerApi
       .groups()
       .then(({ data }) => setGroups(data))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }));
-  }, []);
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }));
+  }, [notify]);
 
   useEffect(() => {
     if (loading) return;
@@ -59,18 +60,16 @@ export default function ManagerPage() {
         </button>
       </div>
 
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
-
       {creating && (
         <CreateGroupForm
           courses={courses}
           onCancel={() => setCreating(false)}
           onCreated={async (name) => {
             setCreating(false);
-            setMessage({ type: "success", text: `"${name}" guruhi yaratildi` });
+            notify({ type: "success", text: `"${name}" guruhi yaratildi` });
             await load();
           }}
-          onError={(text) => setMessage({ type: "danger", text })}
+          onError={(text) => notify({ type: "danger", text })}
         />
       )}
 
@@ -141,10 +140,10 @@ export default function ManagerPage() {
                   group={group}
                   onSaved={async () => {
                     setScheduleFor(null);
-                    setMessage({ type: "success", text: `"${group.name}" jadvali yangilandi` });
+                    notify({ type: "success", text: `"${group.name}" jadvali yangilandi` });
                     await load();
                   }}
-                  onError={(text) => setMessage({ type: "danger", text })}
+                  onError={(text) => notify({ type: "danger", text })}
                 />
               )}
             </article>

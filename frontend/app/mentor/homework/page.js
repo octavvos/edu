@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
 import { Check, Clock, Inbox, X } from "../../../components/Icons";
+import { useNotify } from "../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { initials, useAuth } from "../../../lib/auth";
 
@@ -24,10 +25,10 @@ const FILTERS = [
 
 export default function MentorHomeworkPage() {
   const { user, loading } = useAuth({ roles: ["mentor"] });
+  const notify = useNotify();
   const [filter, setFilter] = useState("");
   const [data, setData] = useState({ counts: {}, results: [] });
   const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
   const [openId, setOpenId] = useState(null);
 
   const load = useCallback((status) => {
@@ -35,37 +36,35 @@ export default function MentorHomeworkPage() {
     return mentorApi
       .submissions(status ? { status } : {})
       .then(({ data: payload }) => setData(payload))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     if (!loading) load(filter);
   }, [loading, filter, load]);
 
   async function handleStatus(submission, status) {
-    setMessage(null);
     try {
       await mentorApi.setStatus(submission.id, status);
-      setMessage({
+      notify({
         type: "info",
         text: `${submission.user_name}: ${STATUS_META[status]?.label}`,
       });
       await load(filter);
     } catch (err) {
-      setMessage({ type: "danger", text: errorMessage(err) });
+      notify({ type: "danger", text: errorMessage(err) });
     }
   }
 
   async function handleGrade(submission, { score, feedback, needsRevision }) {
-    setMessage(null);
     try {
       await mentorApi.grade(submission.id, {
         score: Number(score),
         feedback,
         needs_revision: needsRevision,
       });
-      setMessage({
+      notify({
         type: needsRevision ? "warning" : "success",
         text: needsRevision
           ? `${submission.user_name} qayta ishlashga qaytarildi (${score} ball)`
@@ -74,7 +73,7 @@ export default function MentorHomeworkPage() {
       setOpenId(null);
       await load(filter);
     } catch (err) {
-      setMessage({ type: "danger", text: errorMessage(err) });
+      notify({ type: "danger", text: errorMessage(err) });
     }
   }
 
@@ -97,8 +96,6 @@ export default function MentorHomeworkPage() {
           </span>
         )}
       </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
       <div className="row mb-3" style={{ gap: 8 }}>
         {FILTERS.map((f) => {

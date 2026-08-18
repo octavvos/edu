@@ -5,6 +5,7 @@ import AppShell from "../../../components/AppShell";
 import { Book, Check, ChevronDown, ChevronRight, FileText, X } from "../../../components/Icons";
 import MaterialLink from "../../../components/mentor/MaterialLink";
 import MaterialUploadModal from "../../../components/mentor/MaterialUploadModal";
+import { useNotify } from "../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { MATERIAL_KIND_LABEL, MAX_MATERIAL_SIZE_MB, formatFileSize } from "../../../lib/materials";
 import { useAuth } from "../../../lib/auth";
@@ -20,11 +21,11 @@ const LESSON_TYPE_LABEL = {
 /** Chap: ixcham dars ro'yxati. O'ng: tanlangan darsning materiallari doim ko'rinadi. */
 export default function MentorMaterialsPage() {
   const { user, loading } = useAuth({ roles: ["mentor"] });
+  const notify = useNotify();
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
 
   const load = useCallback(() => {
     return mentorApi
@@ -33,9 +34,9 @@ export default function MentorMaterialsPage() {
         setCourses(data);
         setCourseId((prev) => prev || data[0]?.id || null);
       })
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     if (!loading) load();
@@ -64,8 +65,6 @@ export default function MentorMaterialsPage() {
           </span>
         )}
       </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
       {dataLoading ? (
         <div className="skeleton" style={{ height: 320 }} />
@@ -108,7 +107,7 @@ export default function MentorMaterialsPage() {
 
               <div className="materials-detail-pane">
                 {selected ? (
-                  <MaterialPanel key={selected.id} lesson={selected} onChanged={load} onError={setMessage} />
+                  <MaterialPanel key={selected.id} lesson={selected} onChanged={load} onError={notify} />
                 ) : (
                   <div className="card center" style={{ padding: 40 }}>
                     <div className="empty-icon" style={{ margin: "0 auto 12px" }}><FileText /></div>

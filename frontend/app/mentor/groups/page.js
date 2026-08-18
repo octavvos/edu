@@ -4,19 +4,20 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
 import { Calendar, Swap, Users, X } from "../../../components/Icons";
+import { useNotify } from "../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { initials, useAuth } from "../../../lib/auth";
 
 /** Mentor guruhlari: a'zolar ro'yxati va o'quvchini boshqa guruhga ko'chirish. */
 export default function MentorGroupsPage() {
   const { user, loading } = useAuth({ roles: ["mentor"] });
+  const notify = useNotify();
   const [groups, setGroups] = useState([]);
   const [activeGroupId, setActiveGroupId] = useState(null);
   const [members, setMembers] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [membersLoading, setMembersLoading] = useState(false);
   const [busyId, setBusyId] = useState(null);
-  const [message, setMessage] = useState(null);
 
   useEffect(() => {
     if (loading) return;
@@ -26,9 +27,9 @@ export default function MentorGroupsPage() {
         setGroups(data);
         if (data.length) setActiveGroupId(data[0].id);
       })
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, [loading]);
+  }, [loading, notify]);
 
   const loadMembers = useCallback((groupId) => {
     if (!groupId) return Promise.resolve();
@@ -36,9 +37,9 @@ export default function MentorGroupsPage() {
     return mentorApi
       .members(groupId)
       .then(({ data }) => setMembers(data))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setMembersLoading(false));
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     loadMembers(activeGroupId);
@@ -49,17 +50,16 @@ export default function MentorGroupsPage() {
   async function handleTransfer(membership, toGroupId) {
     if (!toGroupId) return;
     setBusyId(membership.id);
-    setMessage(null);
     try {
       await mentorApi.transfer(membership.student.id, activeGroupId, toGroupId);
       const target = groups.find((g) => g.id === toGroupId);
-      setMessage({
+      notify({
         type: "success",
         text: `${membership.student.display_name} → "${target?.name}" guruhiga ko'chirildi`,
       });
       await loadMembers(activeGroupId);
     } catch (err) {
-      setMessage({ type: "danger", text: errorMessage(err) });
+      notify({ type: "danger", text: errorMessage(err) });
     } finally {
       setBusyId(null);
     }
@@ -68,13 +68,12 @@ export default function MentorGroupsPage() {
   async function handleRemove(membership) {
     if (!window.confirm(`${membership.student.display_name} guruhdan chiqarilsinmi?`)) return;
     setBusyId(membership.id);
-    setMessage(null);
     try {
       await mentorApi.remove(activeGroupId, membership.student.id);
-      setMessage({ type: "info", text: `${membership.student.display_name} guruhdan chiqarildi` });
+      notify({ type: "info", text: `${membership.student.display_name} guruhdan chiqarildi` });
       await loadMembers(activeGroupId);
     } catch (err) {
-      setMessage({ type: "danger", text: errorMessage(err) });
+      notify({ type: "danger", text: errorMessage(err) });
     } finally {
       setBusyId(null);
     }
@@ -90,8 +89,6 @@ export default function MentorGroupsPage() {
           <p>O&apos;quvchilarni ko&apos;ring va kerak bo&apos;lsa boshqa guruhga ko&apos;chiring</p>
         </div>
       </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
       {dataLoading ? (
         <div className="skeleton" style={{ height: 220 }} />

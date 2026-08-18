@@ -1,4 +1,5 @@
 import "./globals.css";
+import { NotificationProvider } from "../components/NotificationProvider";
 
 export const metadata = {
   title: "EduPlatform — onlayn ta'lim",
@@ -21,7 +22,9 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="uz">
-      <body>{children}</body>
+      <body>
+        <NotificationProvider>{children}</NotificationProvider>
+      </body>
     </html>
   );
 }

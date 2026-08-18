@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
 import { Trophy, Users } from "../../../components/Icons";
+import { useNotify } from "../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth";
 
@@ -11,11 +12,11 @@ const MEDAL = ["🥇", "🥈", "🥉"];
 /** Guruh reytingi — baholangan ballar yig'indisi bo'yicha o'quvchilar tartibi. */
 export default function MentorLeaderboardPage() {
   const { user, loading } = useAuth({ roles: ["mentor"] });
+  const notify = useNotify();
   const [groups, setGroups] = useState([]);
   const [groupId, setGroupId] = useState(null);
   const [rows, setRows] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
 
   useEffect(() => {
     if (loading) return;
@@ -25,8 +26,8 @@ export default function MentorLeaderboardPage() {
         setGroups(data);
         setGroupId((prev) => prev || data[0]?.id || null);
       })
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }));
-  }, [loading]);
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }));
+  }, [loading, notify]);
 
   const loadLeaderboard = useCallback((id) => {
     if (!id) return;
@@ -34,9 +35,9 @@ export default function MentorLeaderboardPage() {
     return mentorApi
       .groupLeaderboard(id)
       .then(({ data }) => setRows(data))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     if (groupId) loadLeaderboard(groupId);
@@ -54,8 +55,6 @@ export default function MentorLeaderboardPage() {
           <p>Baholangan ballar yig&apos;indisi bo&apos;yicha guruh o&apos;quvchilari tartibi</p>
         </div>
       </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
       {groups.length === 0 ? (
         <div className="card">

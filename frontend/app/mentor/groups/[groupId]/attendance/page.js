@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import AppShell from "../../../../../components/AppShell";
 import { Check, ChevronRight, Users } from "../../../../../components/Icons";
+import { useNotify } from "../../../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../../../lib/api";
 import { initials, useAuth } from "../../../../../lib/auth";
 
@@ -26,6 +27,7 @@ function todayISO() {
 export default function GroupAttendancePage() {
   const { groupId } = useParams();
   const { user, loading } = useAuth({ roles: ["mentor"] });
+  const notify = useNotify();
 
   const [group, setGroup] = useState(null);
   const [date, setDate] = useState(todayISO());
@@ -36,15 +38,14 @@ export default function GroupAttendancePage() {
   const [notes, setNotes] = useState({});          // student_id -> note
   const [dataLoading, setDataLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState(null);
 
   useEffect(() => {
     if (loading) return;
     mentorApi
       .groups()
       .then(({ data }) => setGroup(data.find((g) => g.id === groupId) || null))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }));
-  }, [loading, groupId]);
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }));
+  }, [loading, groupId, notify]);
 
   const load = useCallback(
     (forDate) => {
@@ -62,10 +63,10 @@ export default function GroupAttendancePage() {
           );
           setNotes(Object.fromEntries(data.sheet.map((r) => [r.student_id, r.note || ""])));
         })
-        .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+        .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
         .finally(() => setDataLoading(false));
     },
-    [groupId],
+    [groupId, notify],
   );
 
   useEffect(() => {
@@ -74,7 +75,6 @@ export default function GroupAttendancePage() {
 
   async function save() {
     setSaving(true);
-    setMessage(null);
     try {
       const records = sheet.map((r) => ({
         student_id: r.student_id,
@@ -82,10 +82,10 @@ export default function GroupAttendancePage() {
         note: notes[r.student_id] || "",
       }));
       await mentorApi.markAttendance(groupId, date, records);
-      setMessage({ type: "success", text: `${records.length} ta o'quvchi davomati saqlandi` });
+      notify({ type: "success", text: `${records.length} ta o'quvchi davomati saqlandi` });
       await load(date);
     } catch (err) {
-      setMessage({ type: "danger", text: errorMessage(err, "Saqlashda xatolik") });
+      notify({ type: "danger", text: errorMessage(err, "Saqlashda xatolik") });
     } finally {
       setSaving(false);
     }
@@ -118,8 +118,6 @@ export default function GroupAttendancePage() {
         </div>
         {alreadyMarked && <span className="badge badge-success">Bu kun uchun olingan</span>}
       </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
       <div className="card mb-3">
         <div className="row" style={{ gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>

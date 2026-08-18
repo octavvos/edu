@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { hasRole, initials, logout } from "../lib/auth";
 import { LogOut } from "./Icons";
+import NotificationBell from "./NotificationBell";
 
 const ROLE_LABEL = {
   manager: "Manager",
@@ -58,6 +59,7 @@ export default function AppShell({ user, children, narrow = false }) {
 
         {user && (
           <div className="row" style={{ gap: 10, marginLeft: 8 }}>
+            <NotificationBell />
             <div className="row" style={{ gap: 9 }}>
               <div className="avatar avatar-sm">{initials(user)}</div>
               <div style={{ lineHeight: 1.25 }}>

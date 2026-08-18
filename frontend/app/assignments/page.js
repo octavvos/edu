@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../components/AppShell";
 import { Clock, FileText, Inbox, Upload } from "../../components/Icons";
+import { useNotify } from "../../components/NotificationProvider";
 import { errorMessage, studentApi } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 
@@ -16,17 +17,17 @@ const STATUS_META = {
 /** O'quvchiga mentor tomonidan yuborilgan vazifalar — topshirish va baho/izohni ko'rish. */
 export default function AssignmentsPage() {
   const { user, loading } = useAuth();
+  const notify = useNotify();
   const [rows, setRows] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
 
   const load = useCallback(() => {
     return studentApi
       .myAssignments()
       .then(({ data }) => setRows(data))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     if (!loading) load();
@@ -45,8 +46,6 @@ export default function AssignmentsPage() {
         </div>
       </div>
 
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
-
       {dataLoading ? (
         <div className="stack">
           <div className="skeleton" style={{ height: 150 }} />
@@ -63,7 +62,7 @@ export default function AssignmentsPage() {
       ) : (
         <div className="stack">
           {rows.map((row) => (
-            <AssignmentCard key={row.id} row={row} onChanged={load} onError={setMessage} />
+            <AssignmentCard key={row.id} row={row} onChanged={load} onError={notify} />
           ))}
         </div>
       )}

@@ -3,24 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../components/AppShell";
 import { Check, Inbox, X } from "../../components/Icons";
+import { useNotify } from "../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../lib/api";
 import { initials, useAuth } from "../../lib/auth";
 
 /** Mentor paneli: ro'yxatdan o'tish so'rovlarini tasdiqlash / rad etish. */
 export default function MentorRequestsPage() {
   const { user, loading } = useAuth({ roles: ["mentor"] });
+  const notify = useNotify();
   const [requests, setRequests] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
-  const [message, setMessage] = useState(null);
 
   const load = useCallback(() => {
     return mentorApi
       .requests()
       .then(({ data }) => setRequests(data))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     if (!loading) load();
@@ -28,16 +29,15 @@ export default function MentorRequestsPage() {
 
   async function handleApprove(request) {
     setBusyId(request.id);
-    setMessage(null);
     try {
       await mentorApi.approve(request.id);
-      setMessage({
+      notify({
         type: "success",
         text: `${request.student.display_name} "${request.group_name}" guruhiga qo'shildi`,
       });
       await load();
     } catch (err) {
-      setMessage({ type: "danger", text: errorMessage(err) });
+      notify({ type: "danger", text: errorMessage(err) });
     } finally {
       setBusyId(null);
     }
@@ -47,13 +47,12 @@ export default function MentorRequestsPage() {
     const note = window.prompt("Rad etish sababi (ixtiyoriy):", "");
     if (note === null) return; // foydalanuvchi bekor qildi
     setBusyId(request.id);
-    setMessage(null);
     try {
       await mentorApi.reject(request.id, note);
-      setMessage({ type: "info", text: `${request.student.display_name} so'rovi rad etildi` });
+      notify({ type: "info", text: `${request.student.display_name} so'rovi rad etildi` });
       await load();
     } catch (err) {
-      setMessage({ type: "danger", text: errorMessage(err) });
+      notify({ type: "danger", text: errorMessage(err) });
     } finally {
       setBusyId(null);
     }
@@ -72,8 +71,6 @@ export default function MentorRequestsPage() {
           <span className="badge badge-warning">{requests.length} ta kutilmoqda</span>
         )}
       </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
       {dataLoading ? (
         <div className="stack">

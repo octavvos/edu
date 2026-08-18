@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import AppShell from "../../components/AppShell";
 import { Trophy, Users } from "../../components/Icons";
+import { useNotify } from "../../components/NotificationProvider";
 import { errorMessage, studentApi } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 
@@ -11,18 +12,18 @@ const MEDAL = ["🥇", "🥈", "🥉"];
 /** O'quvchining o'z guruhi reytingi — baholangan ballar yig'indisi bo'yicha. */
 export default function LeaderboardPage() {
   const { user, loading } = useAuth();
+  const notify = useNotify();
   const [data, setData] = useState({ group_name: null, results: [] });
   const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
 
   useEffect(() => {
     if (loading) return;
     studentApi
       .leaderboard()
       .then(({ data: payload }) => setData(payload))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, [loading]);
+  }, [loading, notify]);
 
   if (loading) {
     return <div className="app-shell"><main><div className="skeleton" style={{ height: 200 }} /></main></div>;
@@ -36,8 +37,6 @@ export default function LeaderboardPage() {
           <p>{data.group_name ? `${data.group_name} guruhi` : "Baholangan ballar bo'yicha tartib"}</p>
         </div>
       </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
       {dataLoading ? (
         <div className="skeleton" style={{ height: 260 }} />

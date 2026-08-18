@@ -151,3 +151,10 @@ export const Trophy = (p) => (
     <path d="M7 5H4a3 3 0 0 0 3 4M17 5h3a3 3 0 0 1-3 4" />
   </svg>
 );
+
+export const Bell = (p) => (
+  <svg {...base} {...p}>
+    <path d="M6 8a6 6 0 0 1 12 0c0 4.5 1.5 6 2 7H4c0.5-1 2-2.5 2-7Z" />
+    <path d="M10 20a2 2 0 0 0 4 0" />
+  </svg>
+);

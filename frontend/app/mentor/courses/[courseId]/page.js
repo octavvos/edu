@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import AppShell from "../../../../components/AppShell";
 import CourseSyllabus from "../../../../components/mentor/CourseSyllabus";
 import { ChevronRight } from "../../../../components/Icons";
+import { useNotify } from "../../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth";
 
@@ -13,9 +14,9 @@ import { useAuth } from "../../../../lib/auth";
 export default function MentorCourseDetailPage() {
   const { courseId } = useParams();
   const { user, loading } = useAuth({ roles: ["mentor"] });
+  const notify = useNotify();
   const [course, setCourse] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
 
   const load = useCallback(() => {
     return mentorApi
@@ -23,11 +24,11 @@ export default function MentorCourseDetailPage() {
       .then(({ data }) => {
         const found = data.find((c) => c.id === courseId);
         setCourse(found || null);
-        if (!found) setMessage({ type: "danger", text: "Kurs topilmadi yoki sizga biriktirilmagan" });
+        if (!found) notify({ type: "danger", text: "Kurs topilmadi yoki sizga biriktirilmagan" });
       })
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
+      .catch((err) => notify({ type: "danger", text: errorMessage(err) }))
       .finally(() => setDataLoading(false));
-  }, [courseId]);
+  }, [courseId, notify]);
 
   useEffect(() => {
     if (!loading) load();
@@ -52,12 +53,10 @@ export default function MentorCourseDetailPage() {
         </div>
       </div>
 
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
-
       {dataLoading ? (
         <div className="skeleton" style={{ height: 320 }} />
       ) : course ? (
-        <CourseSyllabus course={course} onChanged={load} onError={setMessage} />
+        <CourseSyllabus course={course} onChanged={load} onError={notify} />
       ) : null}
     </AppShell>
   );
