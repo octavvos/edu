@@ -100,6 +100,23 @@ docker compose exec backend python manage.py seed_school --purge
 > `--purge` barcha kurs, guruh, o'quvchi va to'lov yozuvlarini o'chiradi.
 > Rollar, huquqlar va superuser hisoblari saqlanadi.
 
+### Sinov o'quvchilari
+
+Interfeysni to'ldirilgan holda ko'rish uchun har bir guruhga soxta
+o'quvchilar qo'shiladi (`test1`, `test2`, … parol `light`):
+
+```bash
+docker compose exec backend python manage.py seed_test_students              # har guruhga 10 tadan
+docker compose exec backend python manage.py seed_test_students --per-group 5
+docker compose exec backend python manage.py seed_test_students --purge      # faqat ularni o'chiradi
+```
+
+Ular haqiqiy oqim orqali qo'shiladi (so'rov → mentor tasdig'i), shuning
+uchun kursga ham yoziladi va vazifa/reyting/davomat bo'limlarida to'g'ri
+ko'rinadi. `--purge` **faqat `test<raqam>` naqshiga** mos hisoblarni
+o'chiradi — qo'lda yaratilgan boshqa hisoblar (masalan raqamsiz `test`)
+tegilmaydi.
+
 ## Rollar va ro'yxatdan o'tish oqimi
 
 Tizimda **3 ta rol** bor:

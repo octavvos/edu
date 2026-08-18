@@ -23,6 +23,13 @@ export function initials(user) {
   const first = (user.first_name || "").trim();
   const last = (user.last_name || "").trim();
   if (first || last) return `${first[0] || ""}${last[0] || ""}`;
+
+  // Ba'zi ro'yxatlar (davomat varaqasi, reyting) faqat display_name beradi
+  const display = (user.display_name || "").trim();
+  if (display) {
+    const parts = display.split(/\s+/);
+    return parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0].slice(0, 2);
+  }
   return (user.username || "?").slice(0, 2);
 }
 
