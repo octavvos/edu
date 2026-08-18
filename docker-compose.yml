@@ -87,6 +87,14 @@ services:
     depends_on:
       - backend
     command: celery -A config worker -l info -Q default,media --concurrency=4
+    # Backend image'idagi HTTP healthcheck bu yerda mos emas (web-server yo'q)
+    healthcheck:
+      # CMD-SHELL kerak: exec shaklida $HOSTNAME kengaymaydi
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   celery-beat:
     image: edu-backend:latest
@@ -99,6 +107,9 @@ services:
     depends_on:
       - backend
     command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    # beat'ni tashqaridan "ping" qilib bo'lmaydi — meros qolgan HTTP tekshiruv o'chiriladi
+    healthcheck:
+      disable: true
 
   frontend:
     build:
