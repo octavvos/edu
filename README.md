@@ -72,13 +72,32 @@ Ishga tushgandan so'ng (barcha yo'llar nginx orqali, 8080-portda):
 Birinchi marta ishga tushirishda:
 
 ```bash
-docker compose exec backend python manage.py seed_rbac    # 3 ta rol va huquqlar
-docker compose exec backend python manage.py seed_demo    # demo kurs, guruhlar, manager/mentor
+docker compose exec backend python manage.py seed_rbac      # 3 ta rol va huquqlar
+docker compose exec backend python manage.py seed_school    # kurs, mentor, guruhlar
 docker compose exec backend python manage.py createsuperuser
 ```
 
-`seed_demo` quyidagi demo hisoblarni yaratadi (parol `demo1234`):
-`manager` — kurs va guruhlarni boshqaradi, `mentor` — so'rovlarni tasdiqlaydi.
+`seed_school` quyidagilarni o'rnatadi (idempotent):
+
+- **Mentor**: `Anvarjon` / `light`
+- **Kurs**: Dasturlash — Scratch, Python, PostgreSQL, Django modullari
+- **Guruhlar** (dushanba, chorshanba, juma):
+
+  | Guruh | Vaqti |
+  |-------|-------|
+  | DS2606 | 08:00 – 10:00 |
+  | DS2605 | 10:00 – 12:00 |
+  | DS2603 | 12:00 – 14:00 |
+  | DS2608 | 14:00 – 16:00 |
+
+Mavjud ma'lumotlarni tozalab, noldan o'rnatish uchun `--purge` bayrog'i:
+
+```bash
+docker compose exec backend python manage.py seed_school --purge
+```
+
+> `--purge` barcha kurs, guruh, o'quvchi va to'lov yozuvlarini o'chiradi.
+> Rollar, huquqlar va superuser hisoblari saqlanadi.
 
 ## Rollar va ro'yxatdan o'tish oqimi
 
