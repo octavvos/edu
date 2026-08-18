@@ -23,7 +23,7 @@ def _admit(mentor, group):
 
 
 def _grade(student, group, score):
-    homework = HomeworkFactory(lesson__module__course=group.course)
+    homework = HomeworkFactory(lesson__module__course=group.course, group=group)
     enrollment = get_enrollment(user=student, course=group.course)
     submission = assignment_services.submit_homework(
         user=student, enrollment=enrollment, homework=homework, text="Bajardim",

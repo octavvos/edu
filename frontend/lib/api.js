@@ -153,8 +153,9 @@ export const mentorApi = {
     api.post(`/mentor/groups/${groupId}/students/${studentId}/remove/`),
   // Vazifa yuborish
   homework: (lessonId) => api.get(`/mentor/lessons/${lessonId}/homework/`),
-  sendHomework: (lessonId, { instructions, deadlineAt, maxScore = 100, materialId } = {}) =>
+  sendHomework: (lessonId, { groupId, instructions, deadlineAt, maxScore = 100, materialId } = {}) =>
     api.post(`/mentor/lessons/${lessonId}/homework/`, {
+      group_id: groupId,
       instructions: { uz: instructions },
       deadline_at: deadlineAt || null,
       max_score: maxScore,

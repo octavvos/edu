@@ -7,7 +7,14 @@ from apps.core.models import BaseModel, i18n_field
 
 
 class Homework(BaseModel):
-    lesson = models.OneToOneField("courses.Lesson", on_delete=models.CASCADE, related_name="homework")
+    """
+    Mentor guruhga jo'natgan vazifa. Bitta dars bir nechta guruhga
+    jo'natilishi mumkin — har biri o'z muddati va topshirig'i bilan,
+    shuning uchun kalit (dars, guruh) juftligi.
+    """
+
+    lesson = models.ForeignKey("courses.Lesson", on_delete=models.CASCADE, related_name="homeworks")
+    group = models.ForeignKey("groups.Group", on_delete=models.CASCADE, related_name="homeworks")
     instructions = i18n_field()
     deadline_at = models.DateTimeField(null=True, blank=True)  # H-05
     max_score = models.PositiveSmallIntegerField(default=100)
@@ -19,6 +26,10 @@ class Homework(BaseModel):
 
     class Meta:
         db_table = "assignments_homework"
+        constraints = [
+            models.UniqueConstraint(fields=["lesson", "group"], name="uniq_homework_per_lesson_group"),
+        ]
+        indexes = [models.Index(fields=["group"])]
 
 
 class SubmissionStatus(models.TextChoices):

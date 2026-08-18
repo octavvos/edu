@@ -134,20 +134,25 @@ yuborilgan → tekshirilmoqda → qayta ishlashga qaytarildi → qabul qilindi
 - Kechikkan topshiriqlar navbatning tepasida va alohida belgi bilan ko'rinadi.
 - Boshqa mentorning topshirig'ini tekshirish 403 bilan rad etiladi.
 
-**Vazifa yuborish** — mentor kurs sillabusida (`/mentor/courses/{id}`) "Uy
-vazifasi" turidagi darsga vazifa biriktiradi (`POST
-/mentor/lessons/{lesson_id}/homework/`, `content.manage` huquqi): vazifa
-matni, muddat, max ball va — ixtiyoriy ravishda — shu darsning
-materiallaridan biri (**taqdimot** yoki **vazifa** fayli) biriktiriladi.
-Yuborilgach, kursga faol yozilgan barcha o'quvchilarga "Vazifalarim"
-bo'limida darhol ko'rinadi (`Homework` yozuvi mavjudligining o'zi —
-ko'rinish belgisi). Qayta yuborish mavjud vazifani yangilaydi (dublikat
-yaratilmaydi).
+**Vazifa jo'natish** — mentor kurs sillabusida (`/mentor/courses/{id}`) "Uy
+vazifasi" turidagi darsga vazifa biriktirib **tanlangan guruhga** jo'natadi
+(`POST /mentor/lessons/{lesson_id}/homework/`, `content.manage` huquqi):
+guruh, vazifa matni, muddat, max ball va — ixtiyoriy ravishda — shu darsning
+materiallaridan biri (**taqdimot** yoki **vazifa** fayli).
+
+Vazifa **guruhga** bog'lanadi, kursga emas: `Homework` kaliti — `(lesson,
+group)` juftligi. Bir nechta guruh bitta kursni baham ko'rgani uchun
+(masalan DS2603/DS2605/DS2606/DS2608 — hammasi "Dasturlash" kursida) bu
+muhim: har bir guruh **faqat o'ziga jo'natilgan** vazifani ko'radi, va bir
+xil dars turli guruhlarga turli muddat/ball bilan jo'natilishi mumkin.
+O'sha guruhga qayta jo'natish mavjud vazifani yangilaydi (dublikat
+yaratilmaydi). Sillabusda har bir dars yonida qaysi guruhlarga
+jo'natilgani belgi sifatida ko'rinadi.
 
 O'quvchi vazifani **ZIP yoki PDF** faylida topshiradi, GitHub havolasi
 ixtiyoriy (`apps/assignments/constants.py`: ruxsat etilgan kengaytmalar,
 max 50 MB). Boshqa kengaytma yoki hajmdan oshgan fayl 400 xato bilan rad
-etiladi.
+etiladi. Boshqa guruhning vazifasini topshirishga urinish 404 qaytaradi.
 
 **O'quvchilar monitoringi** (`/mentor/students`) — progress, oxirgi kirgan
 vaqt va tekshirilmagan topshiriqlar. "Xavf ostida" mezonlari
@@ -230,12 +235,18 @@ O'quvchi (mentor/manager bo'lmagan foydalanuvchi) uchun 3 ta sahifa:
 
 | Sahifa | Yo'l | Nima ko'rsatadi |
 |--------|------|-----------------|
-| Kabinetim | `/dashboard` | Guruhi, dars jadvali, kurslari |
-| Vazifalarim | `/assignments` | Mentor yuborgan vazifalar — matn, biriktirilgan material, topshirish formasi (ZIP/PDF + ixtiyoriy GitHub havolasi), baholangandan keyin ball va izoh |
+| Kabinetim | `/dashboard` | Guruhi, dars jadvali, oxirgi vazifalari |
+| Vazifalarim | `/assignments` | Mentor jo'natgan vazifalar — matn, biriktirilgan taqdimot, topshirish formasi (ZIP/PDF + ixtiyoriy GitHub havolasi), baholangandan keyin ball va izoh |
 | Reyting | `/leaderboard` | O'z guruhining reytingi (pastga qarang) |
 
-`GET /api/v1/assignments/mine/` — o'quvchiga yuborilgan barcha vazifalar,
-har biriga o'zining topshirig'i (bo'lsa) va bahosi biriktirilgan holda.
+O'quvchiga **kurs kontenti ko'rsatilmaydi** — u faqat mentor o'z guruhiga
+jo'natgan vazifani va unga biriktirilgan taqdimotni ko'radi. Dars rejasi,
+modul ro'yxati va boshqa kurs materiallari o'quvchi tomonida umuman
+ochilmaydi.
+
+`GET /api/v1/assignments/mine/` — o'quvchining **o'z guruhiga** jo'natilgan
+vazifalar, har biriga o'zining topshirig'i (bo'lsa) va bahosi biriktirilgan
+holda. Guruhga a'zo bo'lmagan foydalanuvchida ro'yxat bo'sh.
 Topshirish: `POST /api/v1/assignments/{lesson_id}/submissions/` — qayta
 yuborish mavjud topshiriqni yangilaydi (upsert), "qabul qilindi"
 holatidagi vazifada forma yashiriladi.

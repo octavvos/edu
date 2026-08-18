@@ -14,20 +14,24 @@ class MentorLessonSerializer(serializers.ModelSerializer):
     materials = FileAssetSerializer(many=True, read_only=True)
     video_asset = VideoAssetSerializer(read_only=True)
     quiz_id = serializers.SerializerMethodField()
-    homework_id = serializers.SerializerMethodField()
+    sent_to_groups = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
         fields = (
             "id", "type", "title", "text_content", "order", "is_required",
-            "is_free_preview", "materials", "video_asset", "quiz_id", "homework_id",
+            "is_free_preview", "materials", "video_asset", "quiz_id", "sent_to_groups",
         )
 
     def get_quiz_id(self, obj) -> str | None:
         return str(obj.quiz.id) if hasattr(obj, "quiz") else None
 
-    def get_homework_id(self, obj) -> str | None:
-        return str(obj.homework.id) if hasattr(obj, "homework") else None
+    def get_sent_to_groups(self, obj) -> list:
+        """Vazifa qaysi guruhlarga jo'natilgan — sillabusda belgi sifatida ko'rsatiladi."""
+        return [
+            {"id": str(hw.group_id), "name": hw.group.name}
+            for hw in obj.homeworks.all()
+        ]
 
 
 class MentorModuleSerializer(serializers.ModelSerializer):

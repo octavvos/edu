@@ -4,6 +4,7 @@ from factory.django import DjangoModelFactory
 from apps.assignments.models import Homework
 from apps.courses.tests.factories import CourseFactory
 from apps.courses.models import Lesson, LessonType, Module
+from apps.groups.tests.factories import GroupFactory
 
 
 class ModuleFactory(DjangoModelFactory):
@@ -30,5 +31,6 @@ class HomeworkFactory(DjangoModelFactory):
         model = Homework
 
     lesson = factory.SubFactory(LessonFactory)
+    group = factory.SubFactory(GroupFactory)
     instructions = factory.Dict({"uz": "Vazifani bajaring"})
     max_score = 100

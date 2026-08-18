@@ -119,7 +119,7 @@ def test_overdue_submission_flags_student():
     _age_membership(student, 30)
 
     homework = HomeworkFactory(
-        lesson__module__course=group.course,
+        lesson__module__course=group.course, group=group,
         deadline_at=timezone.now() - timedelta(days=3),
     )
     assignment_services.submit_homework(

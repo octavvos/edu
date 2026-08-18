@@ -25,7 +25,20 @@ class HomeworkSubmitView(APIView):
     """POST /api/v1/assignments/{lesson_id}/submissions/ — H-01"""
 
     def post(self, request, lesson_id):
-        homework = Homework.objects.select_related("lesson__module__course").filter(lesson_id=lesson_id).first()
+        from apps.groups.selectors import get_active_membership
+
+        membership = get_active_membership(request.user)
+        if not membership:
+            return Response(
+                {"detail": "Siz hech qaysi guruhga a'zo emassiz"}, status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Vazifa guruhga jo'natiladi — o'quvchi faqat o'z guruhinikini topshiradi.
+        homework = (
+            Homework.objects.select_related("lesson__module__course")
+            .filter(lesson_id=lesson_id, group=membership.group)
+            .first()
+        )
         if not homework:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -49,8 +62,9 @@ class HomeworkSubmitView(APIView):
 
 class MentorHomeworkView(APIView):
     """
-    GET  /api/v1/mentor/lessons/{lesson_id}/homework/ — joriy vazifa sozlamalari (bo'lsa)
-    POST /api/v1/mentor/lessons/{lesson_id}/homework/ — vazifa yaratish/yangilash = o'quvchilarga jo'natish
+    GET  /api/v1/mentor/lessons/{lesson_id}/homework/ — shu darsga qaysi guruhlarga
+         vazifa jo'natilgani (har biri o'z muddati/ballari bilan)
+    POST /api/v1/mentor/lessons/{lesson_id}/homework/ — tanlangan guruhga jo'natish
     """
 
     permission_classes = [IsAuthenticated, HasPermission]
@@ -66,18 +80,23 @@ class MentorHomeworkView(APIView):
         except DomainError as exc:
             return Response({"detail": exc.detail}, status=exc.status_code)
 
-        homework = Homework.objects.select_related("lesson", "material").filter(lesson=lesson).first()
-        if not homework:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        return Response(HomeworkSerializer(homework, context={"request": request}).data)
+        homeworks = (
+            Homework.objects.select_related("lesson", "group", "material")
+            .filter(lesson=lesson, group__mentor=request.user)
+            .order_by("group__name")
+        )
+        return Response(HomeworkSerializer(homeworks, many=True, context={"request": request}).data)
 
     @extend_schema(request=HomeworkSendSerializer, responses=HomeworkSerializer)
     def post(self, request, lesson_id):
         from apps.courses.models import FileAsset, Lesson
+        from apps.groups.models import Group
 
         lesson = get_object_or_404(Lesson.objects.select_related("module__course"), id=lesson_id)
         serializer = HomeworkSendSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        group = get_object_or_404(Group, id=serializer.validated_data["group_id"])
 
         material = None
         material_id = serializer.validated_data.get("material_id")
@@ -86,7 +105,7 @@ class MentorHomeworkView(APIView):
 
         try:
             homework = services.send_homework(
-                mentor=request.user, lesson=lesson,
+                mentor=request.user, lesson=lesson, group=group,
                 instructions=serializer.validated_data["instructions"],
                 deadline_at=serializer.validated_data.get("deadline_at"),
                 max_score=serializer.validated_data["max_score"],

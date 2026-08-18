@@ -4,35 +4,62 @@ import { useEffect, useState } from "react";
 import { Send, X } from "../Icons";
 import { errorMessage, mentorApi } from "../../lib/api";
 
-/** Mentor darsga vazifa yuboradi: yo'riqnoma, muddat, ball va (ixtiyoriy) biriktirilgan material. */
-export default function HomeworkSendModal({ lesson, sent, onSent }) {
+/**
+ * Mentor tanlangan guruhga vazifa jo'natadi: guruh, yo'riqnoma, muddat, ball
+ * va (ixtiyoriy) biriktirilgan material. Vazifa faqat o'sha guruh
+ * o'quvchilariga ko'rinadi — bitta kursni bir necha guruh baham ko'radi.
+ */
+export default function HomeworkSendModal({ lesson, sentGroups = [], onSent }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  const [groups, setGroups] = useState([]);
+  const [groupId, setGroupId] = useState("");
   const [instructions, setInstructions] = useState("");
   const [deadline, setDeadline] = useState("");
   const [maxScore, setMaxScore] = useState(100);
   const [materialId, setMaterialId] = useState("");
+  const [existing, setExisting] = useState([]);
 
+  // Guruhlar va shu darsga allaqachon jo'natilgan vazifalar
   useEffect(() => {
-    if (!open || !sent) return;
+    if (!open) return;
     setLoading(true);
-    mentorApi
-      .homework(lesson.id)
-      .then(({ data }) => {
-        setInstructions(data.instructions || "");
-        setDeadline(data.deadline_at ? data.deadline_at.slice(0, 16) : "");
-        setMaxScore(data.max_score || 100);
-        setMaterialId(data.material?.id || "");
+    Promise.all([mentorApi.groups(), mentorApi.homework(lesson.id)])
+      .then(([groupsRes, hwRes]) => {
+        const courseGroups = groupsRes.data;
+        setGroups(courseGroups);
+        setExisting(hwRes.data);
+        setGroupId((prev) => prev || courseGroups[0]?.id || "");
       })
       .catch((err) => setError(errorMessage(err, "Yuklashda xatolik")))
       .finally(() => setLoading(false));
-  }, [open, sent, lesson.id]);
+  }, [open, lesson.id]);
+
+  // Guruh almashtirilganda — o'sha guruhga avval jo'natilgan bo'lsa, formani to'ldiramiz
+  useEffect(() => {
+    if (!groupId) return;
+    const previous = existing.find((hw) => hw.group === groupId);
+    setInstructions(previous?.instructions || "");
+    setDeadline(previous?.deadline_at ? previous.deadline_at.slice(0, 16) : "");
+    setMaxScore(previous?.max_score || 100);
+    setMaterialId(previous?.material?.id || "");
+  }, [groupId, existing]);
+
+  function close() {
+    if (saving) return;
+    setOpen(false);
+    setError(null);
+  }
 
   async function submit(e) {
     e.preventDefault();
+    if (!groupId) {
+      setError("Guruhni tanlang");
+      return;
+    }
     if (!instructions.trim()) {
       setError("Vazifa matnini kiriting");
       return;
@@ -41,6 +68,7 @@ export default function HomeworkSendModal({ lesson, sent, onSent }) {
     setError(null);
     try {
       await mentorApi.sendHomework(lesson.id, {
+        groupId,
         instructions: instructions.trim(),
         deadlineAt: deadline ? new Date(deadline).toISOString() : null,
         maxScore: Number(maxScore) || 100,
@@ -49,41 +77,60 @@ export default function HomeworkSendModal({ lesson, sent, onSent }) {
       onSent?.();
       setOpen(false);
     } catch (err) {
-      setError(errorMessage(err, "Vazifa yuborishda xatolik"));
+      setError(errorMessage(err, "Vazifa jo'natishda xatolik"));
     } finally {
       setSaving(false);
     }
   }
 
+  const alreadySent = existing.some((hw) => hw.group === groupId);
+
   return (
     <>
       <button
         type="button"
-        className={`btn btn-sm ${sent ? "btn-ghost" : ""}`}
+        className={`btn btn-sm ${sentGroups.length ? "btn-ghost" : ""}`}
         onClick={() => setOpen(true)}
       >
         <Send width={14} height={14} />
-        {sent ? "Vazifani tahrirlash" : "Vazifa yuborish"}
+        {sentGroups.length ? "Yana jo'natish" : "Vazifa jo'natish"}
       </button>
 
       {open && (
-        <div className="hsm-overlay" onMouseDown={() => !saving && setOpen(false)}>
+        <div className="hsm-overlay" onMouseDown={close}>
           <div className="card hsm-modal" onMouseDown={(e) => e.stopPropagation()}>
             <div className="row-between">
-              <h3 style={{ margin: 0 }}>Vazifa yuborish</h3>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)} disabled={saving}>
+              <h3 style={{ margin: 0 }}>Vazifa jo&apos;natish</h3>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={close} disabled={saving}>
                 <X width={14} height={14} />
               </button>
             </div>
             <p className="small muted mt-1">
-              {lesson.title} — yuborilgach, kursga yozilgan barcha o&apos;quvchilarga &quot;Vazifalarim&quot;
-              bo&apos;limida ko&apos;rinadi
+              {lesson.title} — vazifa faqat tanlangan guruh o&apos;quvchilariga ko&apos;rinadi
             </p>
 
             {loading ? (
-              <div className="skeleton mt-3" style={{ height: 160 }} />
+              <div className="skeleton mt-3" style={{ height: 200 }} />
             ) : (
               <form onSubmit={submit} className="stack mt-3" style={{ gap: 10 }}>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Guruh</label>
+                  <select value={groupId} onChange={(e) => setGroupId(e.target.value)} disabled={saving}>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                        {existing.some((hw) => hw.group === g.id) ? " — jo'natilgan" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {alreadySent && (
+                  <div className="alert alert-info" style={{ marginBottom: 0 }}>
+                    Bu guruhga allaqachon jo&apos;natilgan — saqlasangiz yangilanadi.
+                  </div>
+                )}
+
                 <div>
                   <label className="small strong">Vazifa matni</label>
                   <textarea
@@ -120,7 +167,7 @@ export default function HomeworkSendModal({ lesson, sent, onSent }) {
                 </div>
 
                 <div className="field" style={{ marginBottom: 0 }}>
-                  <label>Material biriktirish (ixtiyoriy)</label>
+                  <label>Taqdimot / material biriktirish (ixtiyoriy)</label>
                   <select value={materialId} onChange={(e) => setMaterialId(e.target.value)} disabled={saving}>
                     <option value="">Materialsiz — faqat vazifaning o&apos;zi</option>
                     {(lesson.materials || []).map((m) => (
@@ -134,13 +181,13 @@ export default function HomeworkSendModal({ lesson, sent, onSent }) {
                 {error && <div className="alert alert-danger" style={{ marginBottom: 0 }}>{error}</div>}
 
                 <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)} disabled={saving}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={close} disabled={saving}>
                     Bekor qilish
                   </button>
                   <button type="submit" className="btn btn-sm" disabled={saving}>
                     {saving && <span className="spinner" />}
                     <Send width={14} height={14} />
-                    Yuborish
+                    Jo&apos;natish
                   </button>
                 </div>
               </form>

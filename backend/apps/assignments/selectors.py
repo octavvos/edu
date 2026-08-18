@@ -87,19 +87,19 @@ def get_user_submissions(*, user, course):
 
 def get_my_assignments(user):
     """
-    O'quvchining faol yozilgan kurslaridagi barcha yuborilgan (mentor
-    Homework yaratgan) uy vazifalari. Har bir Homework'ga o'quvchining
-    o'z Submission'i (mavjud bo'lsa, `grade` bilan) `_my_submission`
-    sifatida biriktiriladi — `MyAssignmentSerializer` shundan foydalanadi.
+    O'quvchiga mentor jo'natgan vazifalar — faqat o'z guruhiga
+    jo'natilganlari. Har bir Homework'ga o'quvchining o'z Submission'i
+    (mavjud bo'lsa, `grade` bilan) `_my_submission` sifatida biriktiriladi —
+    `MyAssignmentSerializer` shundan foydalanadi.
     """
-    from apps.enrollment.models import Enrollment, EnrollmentStatus
+    from apps.groups.selectors import get_active_membership
 
-    course_ids = Enrollment.objects.filter(
-        user=user, status=EnrollmentStatus.ACTIVE,
-    ).values_list("course_id", flat=True)
+    membership = get_active_membership(user)
+    if not membership:
+        return []
 
     homeworks = list(
-        Homework.objects.filter(lesson__module__course_id__in=course_ids)
+        Homework.objects.filter(group=membership.group)
         .select_related("lesson", "lesson__module", "material")
         .order_by("-created_at"),
     )
@@ -126,10 +126,15 @@ def count_pending_review_for(mentor) -> int:
 
 
 def has_missed_deadline(user) -> bool:
-    """Topshirilmagan, muddati o'tgan uy vazifasi bormi."""
+    """O'z guruhiga jo'natilgan, topshirilmagan va muddati o'tgan vazifa bormi."""
+    from apps.groups.selectors import get_active_membership
+
+    membership = get_active_membership(user)
+    if not membership:
+        return False
+
     now = timezone.now()
     submitted_ids = Submission.objects.filter(user=user).values_list("homework_id", flat=True)
     return Homework.objects.filter(
-        deadline_at__lt=now,
-        lesson__module__course__enrollments__user=user,
+        deadline_at__lt=now, group=membership.group,
     ).exclude(id__in=submitted_ids).exists()

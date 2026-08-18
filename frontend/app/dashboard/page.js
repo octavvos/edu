@@ -1,28 +1,34 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import AppShell from "../../components/AppShell";
-import { Book, Calendar, Clock, Users } from "../../components/Icons";
-import { catalogApi, groupsApi } from "../../lib/api";
+import { Calendar, Clock, Inbox, Users } from "../../components/Icons";
+import { groupsApi, studentApi } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 
-/** O'quvchi kabineti: o'z guruhi, dars jadvali va kurslari. */
+/**
+ * O'quvchi kabineti: o'z guruhi va dars jadvali.
+ * Kurs kontenti bu yerda ko'rsatilmaydi — o'quvchi faqat mentor jo'natgan
+ * vazifani va unga biriktirilgan taqdimotni "Vazifalarim" bo'limida ko'radi.
+ */
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const [group, setGroup] = useState(null);
-  const [courses, setCourses] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     if (loading) return;
     Promise.all([
       groupsApi.my().then(({ data }) => setGroup(data.group)).catch(() => {}),
-      catalogApi
-        .courses()
-        .then(({ data }) => setCourses(data.results || data))
-        .catch(() => {}),
+      studentApi.myAssignments().then(({ data }) => setAssignments(data)).catch(() => {}),
     ]).finally(() => setDataLoading(false));
   }, [loading]);
+
+  const pendingCount = assignments.filter(
+    (a) => a.submission?.status !== "accepted",
+  ).length;
 
   if (loading) return <PageSkeleton />;
 
@@ -59,8 +65,8 @@ export default function DashboardPage() {
               <div className="stat-value">{group?.active_members_count ?? 0}</div>
             </div>
             <div className="stat">
-              <div className="stat-label">Kurslar</div>
-              <div className="stat-value">{courses.length}</div>
+              <div className="stat-label">Bajarilmagan vazifa</div>
+              <div className="stat-value">{pendingCount}</div>
             </div>
           </div>
 
@@ -128,32 +134,45 @@ export default function DashboardPage() {
             <div className="card-head">
               <h2>
                 <span className="row" style={{ gap: 8 }}>
-                  <Book /> Mening kurslarim
+                  <Inbox /> Vazifalarim
                 </span>
               </h2>
+              {assignments.length > 0 && (
+                <Link href="/assignments" className="btn btn-ghost btn-sm">
+                  Hammasi
+                </Link>
+              )}
             </div>
-            {courses.length ? (
-              <div className="grid">
-                {courses.map((course) => (
-                  <article key={course.id} className="card card-hover" style={{ padding: 16 }}>
-                    <h3>{course.title}</h3>
-                    {course.description && (
-                      <p className="small muted mt-1">{course.description}</p>
+            {assignments.length ? (
+              <div className="stack" style={{ gap: 8 }}>
+                {assignments.slice(0, 3).map((a) => (
+                  <Link
+                    key={a.id}
+                    href="/assignments"
+                    className="row-between"
+                    style={{
+                      padding: "11px 13px", background: "var(--bg-subtle)",
+                      borderRadius: "var(--radius)", color: "var(--text)",
+                    }}
+                  >
+                    <span className="small strong">{a.lesson_title}</span>
+                    {a.submission?.grade ? (
+                      <span className="chip">
+                        Ball: <strong>{a.submission.grade.score}</strong> / {a.max_score}
+                      </span>
+                    ) : (
+                      <span className="badge badge-info">
+                        {a.submission ? "Tekshiruvda" : "Topshirilmagan"}
+                      </span>
                     )}
-                    <div className="row mt-2">
-                      <span className="badge badge-primary">{course.level_display}</span>
-                      {course.enrollment_count > 0 && (
-                        <span className="chip">{course.enrollment_count} o&apos;quvchi</span>
-                      )}
-                    </div>
-                  </article>
+                  </Link>
                 ))}
               </div>
             ) : (
               <EmptyState
-                icon={<Book />}
-                title="Kurs topilmadi"
-                text="Guruhingizga kurs biriktirilgach shu yerda ko'rinadi."
+                icon={<Inbox />}
+                title="Vazifa yo'q"
+                text="Mentoringiz vazifa jo'natgach shu yerda ko'rinadi."
               />
             )}
           </section>

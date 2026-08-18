@@ -206,9 +206,9 @@ function LessonRow({ lesson, onChanged, onError }) {
         >
           <span className="badge badge-neutral">{typeLabel(lesson.type)}</span>
           <span className="strong small">{lesson.title}</span>
-          {lesson.type === "homework" && lesson.homework_id && (
-            <span className="badge badge-success">Yuborilgan</span>
-          )}
+          {lesson.sent_to_groups?.map((g) => (
+            <span key={g.id} className="badge badge-success">{g.name}</span>
+          ))}
         </button>
 
         <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
@@ -226,7 +226,7 @@ function LessonRow({ lesson, onChanged, onError }) {
             )
           ) : lesson.type === "homework" ? (
             <>
-              <HomeworkSendModal lesson={lesson} sent={Boolean(lesson.homework_id)} onSent={onChanged} />
+              <HomeworkSendModal lesson={lesson} sentGroups={lesson.sent_to_groups || []} onSent={onChanged} />
               <MaterialUploadModal
                 lessonId={lesson.id}
                 label={lesson.materials?.length > 0 ? "Yana fayl qo'shish" : "Material yuklash"}

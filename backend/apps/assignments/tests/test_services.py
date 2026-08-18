@@ -31,7 +31,7 @@ def _student_in_group_of(mentor, *, course=None):
 
 
 def _submit(student, group, **homework_kwargs):
-    homework = HomeworkFactory(lesson__module__course=group.course, **homework_kwargs)
+    homework = HomeworkFactory(lesson__module__course=group.course, group=group, **homework_kwargs)
     enrollment = get_enrollment(user=student, course=group.course)
     return services.submit_homework(
         user=student, enrollment=enrollment, homework=homework, text="Bajardim",
@@ -233,34 +233,53 @@ def test_mentor_queue_puts_late_submissions_first():
 
 
 # ---------------------------------------------------------------------------
-# Vazifa yuborish (mentor -> o'quvchi)
+# Vazifa jo'natish (mentor -> guruh)
 # ---------------------------------------------------------------------------
 
-def test_send_homework_creates_it_for_own_lesson():
+def test_send_homework_creates_it_for_chosen_group():
     mentor = UserFactory()
     _, group = _student_in_group_of(mentor)
     lesson = LessonFactory(module__course=group.course)
 
     homework = services.send_homework(
-        mentor=mentor, lesson=lesson, instructions={"uz": "PDF shaklida topshiring"}, max_score=50,
+        mentor=mentor, lesson=lesson, group=group,
+        instructions={"uz": "PDF shaklida topshiring"}, max_score=50,
     )
 
     assert homework.lesson_id == lesson.id
+    assert homework.group_id == group.id
     assert homework.max_score == 50
-    assert Homework.objects.filter(lesson=lesson).count() == 1
 
 
-def test_send_homework_twice_updates_instead_of_duplicating():
+def test_send_homework_twice_to_same_group_updates_instead_of_duplicating():
     mentor = UserFactory()
     _, group = _student_in_group_of(mentor)
     lesson = LessonFactory(module__course=group.course)
 
-    services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "V1"}, max_score=100)
-    updated = services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "V2"}, max_score=80)
+    services.send_homework(mentor=mentor, lesson=lesson, group=group,
+                           instructions={"uz": "V1"}, max_score=100)
+    updated = services.send_homework(mentor=mentor, lesson=lesson, group=group,
+                                     instructions={"uz": "V2"}, max_score=80)
 
-    assert Homework.objects.filter(lesson=lesson).count() == 1
+    assert Homework.objects.filter(lesson=lesson, group=group).count() == 1
     assert updated.max_score == 80
     assert updated.instructions["uz"] == "V2"
+
+
+def test_same_lesson_can_be_sent_to_several_groups_independently():
+    """Bitta kursni bir necha guruh baham ko'radi — har biriga o'z muddati bilan."""
+    mentor = UserFactory()
+    _, group_a = _student_in_group_of(mentor)
+    group_b = GroupFactory(mentor=mentor, course=group_a.course)
+    lesson = LessonFactory(module__course=group_a.course)
+
+    services.send_homework(mentor=mentor, lesson=lesson, group=group_a,
+                           instructions={"uz": "A guruh"}, max_score=100)
+    services.send_homework(mentor=mentor, lesson=lesson, group=group_b,
+                           instructions={"uz": "B guruh"}, max_score=60)
+
+    assert Homework.objects.filter(lesson=lesson).count() == 2
+    assert Homework.objects.get(lesson=lesson, group=group_b).max_score == 60
 
 
 def test_send_homework_rejected_for_unrelated_mentor():
@@ -270,8 +289,32 @@ def test_send_homework_rejected_for_unrelated_mentor():
     lesson = LessonFactory(module__course=group.course)
 
     with pytest.raises(DomainError) as exc:
-        services.send_homework(mentor=outsider, lesson=lesson, instructions={"uz": "V1"})
+        services.send_homework(mentor=outsider, lesson=lesson, group=group, instructions={"uz": "V1"})
     assert exc.value.status_code == 403
+
+
+def test_send_homework_rejected_for_another_mentors_group():
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    other_group = GroupFactory(mentor=UserFactory(), course=group.course)
+
+    with pytest.raises(DomainError) as exc:
+        services.send_homework(mentor=mentor, lesson=lesson, group=other_group,
+                               instructions={"uz": "V1"})
+    assert exc.value.code == "not_your_group"
+
+
+def test_send_homework_rejects_group_from_another_course():
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    foreign_group = GroupFactory(mentor=mentor)  # boshqa kursning guruhi
+
+    with pytest.raises(DomainError) as exc:
+        services.send_homework(mentor=mentor, lesson=lesson, group=foreign_group,
+                               instructions={"uz": "V1"})
+    assert exc.value.code == "group_course_mismatch"
 
 
 def test_send_homework_with_material_from_same_lesson():
@@ -284,7 +327,8 @@ def test_send_homework_with_material_from_same_lesson():
     )
 
     homework = services.send_homework(
-        mentor=mentor, lesson=lesson, instructions={"uz": "Slaydni ko'rib chiqing"}, material=material,
+        mentor=mentor, lesson=lesson, group=group,
+        instructions={"uz": "Slaydni ko'rib chiqing"}, material=material,
     )
 
     assert homework.material_id == material.id
@@ -301,7 +345,8 @@ def test_send_homework_rejects_material_from_another_lesson():
     )
 
     with pytest.raises(DomainError) as exc:
-        services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "V1"}, material=material)
+        services.send_homework(mentor=mentor, lesson=lesson, group=group,
+                               instructions={"uz": "V1"}, material=material)
     assert exc.value.code == "material_mismatch"
 
 
@@ -309,32 +354,43 @@ def test_send_homework_rejects_material_from_another_lesson():
 # O'quvchiga ko'rinadigan vazifalar ro'yxati
 # ---------------------------------------------------------------------------
 
-def test_get_my_assignments_shows_sent_homework_with_own_submission():
+def test_get_my_assignments_shows_only_homework_sent_to_own_group():
     from apps.assignments.selectors import get_my_assignments
 
     mentor = UserFactory()
     student, group = _student_in_group_of(mentor)
+    other_group = GroupFactory(mentor=mentor, course=group.course)
     lesson = LessonFactory(module__course=group.course)
-    services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "Bajaring"})
+
+    mine = services.send_homework(mentor=mentor, lesson=lesson, group=group,
+                                  instructions={"uz": "Mening guruhimga"})
+    services.send_homework(mentor=mentor, lesson=LessonFactory(module__course=group.course),
+                           group=other_group, instructions={"uz": "Boshqa guruhga"})
 
     rows = get_my_assignments(student)
-    assert len(rows) == 1
+    assert [r.id for r in rows] == [mine.id]
     assert rows[0]._my_submission is None
 
-    submission = _submit(student, group)  # boshqa (avtomatik) homework uchun emas, alohida
-    # `_submit` o'zining Homework'ini yaratadi — shu darsga tegishli topshiriqni tekshiramiz
-    rows_after = get_my_assignments(student)
-    matching = [r for r in rows_after if r.id == submission.homework_id][0]
+
+def test_get_my_assignments_attaches_own_submission():
+    from apps.assignments.selectors import get_my_assignments
+
+    mentor = UserFactory()
+    student, group = _student_in_group_of(mentor)
+    submission = _submit(student, group)
+
+    rows = get_my_assignments(student)
+    matching = [r for r in rows if r.id == submission.homework_id][0]
     assert matching._my_submission.id == submission.id
 
 
-def test_get_my_assignments_empty_for_unrelated_student():
+def test_get_my_assignments_empty_for_student_without_group():
     from apps.assignments.selectors import get_my_assignments
 
     mentor = UserFactory()
     _, group = _student_in_group_of(mentor)
     lesson = LessonFactory(module__course=group.course)
-    services.send_homework(mentor=mentor, lesson=lesson, instructions={"uz": "Bajaring"})
+    services.send_homework(mentor=mentor, lesson=lesson, group=group, instructions={"uz": "Bajaring"})
 
     outsider = UserFactory()
     assert get_my_assignments(outsider) == []

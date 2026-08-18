@@ -56,8 +56,9 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
 
 class HomeworkSendSerializer(serializers.Serializer):
-    """Mentor darsga vazifa yuboradi — nom/izoh mavjud materiallardan biriga ilova qilinishi mumkin."""
+    """Mentor tanlangan guruhga vazifa jo'natadi; materialni ilova qilishi mumkin."""
 
+    group_id = serializers.UUIDField()
     instructions = serializers.JSONField()
     deadline_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
     max_score = serializers.IntegerField(min_value=1, max_value=1000, default=100)
@@ -67,11 +68,15 @@ class HomeworkSendSerializer(serializers.Serializer):
 class HomeworkSerializer(serializers.ModelSerializer):
     instructions = I18nCharField()
     lesson_title = I18nCharField(source="lesson.title")
+    group_name = serializers.CharField(source="group.name", read_only=True)
     material = FileAssetSerializer(read_only=True)
 
     class Meta:
         model = Homework
-        fields = ("id", "lesson", "lesson_title", "instructions", "deadline_at", "max_score", "material")
+        fields = (
+            "id", "lesson", "lesson_title", "group", "group_name",
+            "instructions", "deadline_at", "max_score", "material",
+        )
 
 
 class MySubmissionSerializer(serializers.ModelSerializer):
@@ -84,7 +89,7 @@ class MySubmissionSerializer(serializers.ModelSerializer):
 
 
 class MyAssignmentSerializer(serializers.ModelSerializer):
-    """O'quvchiga yuborilgan vazifa + o'zining topshirig'i/bahosi (bo'lsa)."""
+    """O'quvchiga jo'natilgan vazifa + o'zining topshirig'i/bahosi (bo'lsa)."""
 
     instructions = I18nCharField()
     lesson_title = I18nCharField(source="lesson.title")

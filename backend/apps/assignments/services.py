@@ -42,23 +42,27 @@ def submit_homework(*, user, enrollment, homework: Homework, file=None, text: st
 
 
 @transaction.atomic
-def send_homework(*, mentor, lesson, instructions: dict, deadline_at=None, max_score: int = 100,
+def send_homework(*, mentor, lesson, group, instructions: dict, deadline_at=None, max_score: int = 100,
                    material=None) -> Homework:
     """
-    Mentor darsga uy vazifasini yaratadi/yangilaydi — bu "jo'natish" harakati:
-    Homework mavjud bo'lishi bilanoq kursga faol yozilgan barcha o'quvchilarga
-    ko'rinadi (`selectors.get_my_assignments`). Material — mentor shu darsga
+    Mentor tanlangan guruhga vazifa jo'natadi. Vazifa faqat shu guruh
+    o'quvchilariga ko'rinadi (`selectors.get_my_assignments`) — bitta kursni
+    bir necha guruh baham ko'rgani uchun bu muhim. Material — mentor shu darsga
     yuklagan fayllardan biri (taqdimot yoki vazifa), ixtiyoriy.
     """
     from apps.courses.services import assert_can_manage_lesson
 
     assert_can_manage_lesson(mentor=mentor, lesson=lesson)
 
+    if group.mentor_id != mentor.id and not mentor.is_superuser:
+        raise AssignmentError("Bu guruh sizga biriktirilmagan", code="not_your_group", status_code=403)
+    if group.course_id != lesson.module.course_id:
+        raise AssignmentError("Guruh bu kursga tegishli emas", code="group_course_mismatch")
     if material is not None and material.lesson_id != lesson.id:
         raise AssignmentError("Material shu darsga tegishli emas", code="material_mismatch")
 
     homework, _ = Homework.objects.update_or_create(
-        lesson=lesson,
+        lesson=lesson, group=group,
         defaults={
             "instructions": instructions, "deadline_at": deadline_at,
             "max_score": max_score, "material": material,
