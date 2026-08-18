@@ -153,13 +153,14 @@ export const mentorApi = {
     api.post(`/mentor/groups/${groupId}/students/${studentId}/remove/`),
   // Vazifa yuborish
   homework: (lessonId) => api.get(`/mentor/lessons/${lessonId}/homework/`),
-  sendHomework: (lessonId, { groupId, instructions, deadlineAt, maxScore = 100, materialId } = {}) =>
+  sendHomework: (lessonId, { groupId, instructions, deadlineAt, maxScore = 100, materialId, presentationId } = {}) =>
     api.post(`/mentor/lessons/${lessonId}/homework/`, {
       group_id: groupId,
       instructions: { uz: instructions },
       deadline_at: deadlineAt || null,
       max_score: maxScore,
       material_id: materialId || null,
+      presentation_id: presentationId || null,
     }),
   groupLeaderboard: (groupId) => api.get(`/mentor/groups/${groupId}/leaderboard/`),
   // Davomat

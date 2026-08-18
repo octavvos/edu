@@ -18,9 +18,13 @@ class Homework(BaseModel):
     instructions = i18n_field()
     deadline_at = models.DateTimeField(null=True, blank=True)  # H-05
     max_score = models.PositiveSmallIntegerField(default=100)
-    # Mentor "jo'natish"da tanlagan material (taqdimot yoki vazifa fayli) —
-    # shu darsning materiallaridan biri, ixtiyoriy.
+    # Vazifaning o'zi (masalan topshiriq faylini o'z ichiga olgan material), ixtiyoriy.
     material = models.ForeignKey(
+        "courses.FileAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    # Vazifaga qo'shimcha biriktirilgan taqdimot — `material`dan mustaqil,
+    # ikkalasi ham tanlansa o'quvchiga birga boradi.
+    presentation = models.ForeignKey(
         "courses.FileAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
     )
 

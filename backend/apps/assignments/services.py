@@ -43,12 +43,13 @@ def submit_homework(*, user, enrollment, homework: Homework, file=None, text: st
 
 @transaction.atomic
 def send_homework(*, mentor, lesson, group, instructions: dict, deadline_at=None, max_score: int = 100,
-                   material=None) -> Homework:
+                   material=None, presentation=None) -> Homework:
     """
     Mentor tanlangan guruhga vazifa jo'natadi. Vazifa faqat shu guruh
     o'quvchilariga ko'rinadi (`selectors.get_my_assignments`) — bitta kursni
-    bir necha guruh baham ko'rgani uchun bu muhim. Material — mentor shu darsga
-    yuklagan fayllardan biri (taqdimot yoki vazifa), ixtiyoriy.
+    bir necha guruh baham ko'rgani uchun bu muhim. `material` (vazifa fayli)
+    va `presentation` (taqdimot) bir-biridan mustaqil — ikkalasi ham
+    tanlansa, ikkalasi ham o'quvchiga birga boradi.
     """
     from apps.courses.services import assert_can_manage_lesson
 
@@ -60,12 +61,14 @@ def send_homework(*, mentor, lesson, group, instructions: dict, deadline_at=None
         raise AssignmentError("Guruh bu kursga tegishli emas", code="group_course_mismatch")
     if material is not None and material.lesson_id != lesson.id:
         raise AssignmentError("Material shu darsga tegishli emas", code="material_mismatch")
+    if presentation is not None and presentation.lesson_id != lesson.id:
+        raise AssignmentError("Taqdimot shu darsga tegishli emas", code="presentation_mismatch")
 
     homework, _ = Homework.objects.update_or_create(
         lesson=lesson, group=group,
         defaults={
             "instructions": instructions, "deadline_at": deadline_at,
-            "max_score": max_score, "material": material,
+            "max_score": max_score, "material": material, "presentation": presentation,
         },
     )
     return homework

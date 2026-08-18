@@ -10,7 +10,7 @@ import { useAuth } from "../../lib/auth";
 /**
  * O'quvchi kabineti: o'z guruhi va dars jadvali.
  * Kurs kontenti bu yerda ko'rsatilmaydi — o'quvchi faqat mentor jo'natgan
- * vazifani va unga biriktirilgan taqdimotni "Vazifalarim" bo'limida ko'radi.
+ * vazifani va unga biriktirilgan taqdimotni "Topshiriqlarim" bo'limida ko'radi.
  */
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -134,7 +134,7 @@ export default function DashboardPage() {
             <div className="card-head">
               <h2>
                 <span className="row" style={{ gap: 8 }}>
-                  <Inbox /> Vazifalarim
+                  <Inbox /> Topshiriqlarim
                 </span>
               </h2>
               {assignments.length > 0 && (

@@ -100,7 +100,7 @@ def get_my_assignments(user):
 
     homeworks = list(
         Homework.objects.filter(group=membership.group)
-        .select_related("lesson", "lesson__module", "material")
+        .select_related("lesson", "lesson__module", "material", "presentation")
         .order_by("-created_at"),
     )
     submissions = {

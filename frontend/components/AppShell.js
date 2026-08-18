@@ -29,7 +29,7 @@ export default function AppShell({ user, children, narrow = false }) {
   }
   if (!hasRole(user, "manager") && !hasRole(user, "mentor")) {
     links.push({ href: "/dashboard", label: "Kabinetim" });
-    links.push({ href: "/assignments", label: "Vazifalarim" });
+    links.push({ href: "/assignments", label: "Topshiriqlarim" });
     links.push({ href: "/leaderboard", label: "Reyting" });
   }
 

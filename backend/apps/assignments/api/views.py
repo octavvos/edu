@@ -81,7 +81,7 @@ class MentorHomeworkView(APIView):
             return Response({"detail": exc.detail}, status=exc.status_code)
 
         homeworks = (
-            Homework.objects.select_related("lesson", "group", "material")
+            Homework.objects.select_related("lesson", "group", "material", "presentation")
             .filter(lesson=lesson, group__mentor=request.user)
             .order_by("group__name")
         )
@@ -103,6 +103,11 @@ class MentorHomeworkView(APIView):
         if material_id:
             material = get_object_or_404(FileAsset, id=material_id)
 
+        presentation = None
+        presentation_id = serializer.validated_data.get("presentation_id")
+        if presentation_id:
+            presentation = get_object_or_404(FileAsset, id=presentation_id)
+
         try:
             homework = services.send_homework(
                 mentor=request.user, lesson=lesson, group=group,
@@ -110,6 +115,7 @@ class MentorHomeworkView(APIView):
                 deadline_at=serializer.validated_data.get("deadline_at"),
                 max_score=serializer.validated_data["max_score"],
                 material=material,
+                presentation=presentation,
             )
         except DomainError as exc:
             return Response({"detail": exc.detail}, status=exc.status_code)

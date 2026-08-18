@@ -63,6 +63,7 @@ class HomeworkSendSerializer(serializers.Serializer):
     deadline_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
     max_score = serializers.IntegerField(min_value=1, max_value=1000, default=100)
     material_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    presentation_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
 
 class HomeworkSerializer(serializers.ModelSerializer):
@@ -70,12 +71,13 @@ class HomeworkSerializer(serializers.ModelSerializer):
     lesson_title = I18nCharField(source="lesson.title")
     group_name = serializers.CharField(source="group.name", read_only=True)
     material = FileAssetSerializer(read_only=True)
+    presentation = FileAssetSerializer(read_only=True)
 
     class Meta:
         model = Homework
         fields = (
             "id", "lesson", "lesson_title", "group", "group_name",
-            "instructions", "deadline_at", "max_score", "material",
+            "instructions", "deadline_at", "max_score", "material", "presentation",
         )
 
 
@@ -94,13 +96,14 @@ class MyAssignmentSerializer(serializers.ModelSerializer):
     instructions = I18nCharField()
     lesson_title = I18nCharField(source="lesson.title")
     material = FileAssetSerializer(read_only=True)
+    presentation = FileAssetSerializer(read_only=True)
     submission = serializers.SerializerMethodField()
 
     class Meta:
         model = Homework
         fields = (
             "id", "lesson", "lesson_title", "instructions", "deadline_at",
-            "max_score", "material", "submission",
+            "max_score", "material", "presentation", "submission",
         )
 
     def get_submission(self, obj):

@@ -40,7 +40,7 @@ export default function AssignmentsPage() {
     <AppShell user={user}>
       <div className="page-head">
         <div>
-          <h1>Vazifalarim</h1>
+          <h1>Topshiriqlarim</h1>
           <p>Mentoringiz tomonidan yuborilgan vazifalar</p>
         </div>
       </div>
@@ -107,17 +107,21 @@ function AssignmentCard({ row, onChanged, onError }) {
 
       <p className="mt-2">{row.instructions}</p>
 
-      {row.material && (
-        <a
-          href={row.material.file}
-          target="_blank"
-          rel="noreferrer"
-          className="row small mt-2"
-          style={{ gap: 6 }}
-        >
-          <FileText width={14} height={14} />
-          {row.material.title || row.material.original_filename}
-        </a>
+      {(row.material || row.presentation) && (
+        <div className="row mt-2" style={{ gap: 16, flexWrap: "wrap" }}>
+          {row.material && (
+            <a href={row.material.file} target="_blank" rel="noreferrer" className="row small" style={{ gap: 6 }}>
+              <FileText width={14} height={14} />
+              {row.material.title || row.material.original_filename}
+            </a>
+          )}
+          {row.presentation && (
+            <a href={row.presentation.file} target="_blank" rel="noreferrer" className="row small" style={{ gap: 6 }}>
+              <FileText width={14} height={14} />
+              {row.presentation.title || row.presentation.original_filename}
+            </a>
+          )}
+        </div>
       )}
 
       {submission && (submission.file || submission.link || submission.text) && (

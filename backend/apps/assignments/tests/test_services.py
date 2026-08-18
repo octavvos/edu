@@ -350,6 +350,45 @@ def test_send_homework_rejects_material_from_another_lesson():
     assert exc.value.code == "material_mismatch"
 
 
+def test_send_homework_with_both_task_material_and_presentation():
+    """Vazifa fayli va taqdimot bir-biridan mustaqil — ikkalasi ham birga jo'natilishi mumkin."""
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    task_file = course_services.add_file_material(
+        lesson=lesson, file=SimpleUploadedFile("vazifa.pdf", b"%PDF-1.4"),
+        title="Vazifa fayli", kind="task",
+    )
+    presentation = course_services.add_file_material(
+        lesson=lesson, file=SimpleUploadedFile("slayd.pdf", b"%PDF-1.4"),
+        title="Slaydlar", kind="presentation",
+    )
+
+    homework = services.send_homework(
+        mentor=mentor, lesson=lesson, group=group,
+        instructions={"uz": "Vazifa va taqdimot"}, material=task_file, presentation=presentation,
+    )
+
+    assert homework.material_id == task_file.id
+    assert homework.presentation_id == presentation.id
+
+
+def test_send_homework_rejects_presentation_from_another_lesson():
+    mentor = UserFactory()
+    _, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    other_lesson = LessonFactory(module__course=group.course)
+    presentation = course_services.add_file_material(
+        lesson=other_lesson, file=SimpleUploadedFile("slayd.pdf", b"%PDF-1.4"),
+        title="Slaydlar", kind="presentation",
+    )
+
+    with pytest.raises(DomainError) as exc:
+        services.send_homework(mentor=mentor, lesson=lesson, group=group,
+                               instructions={"uz": "V1"}, presentation=presentation)
+    assert exc.value.code == "presentation_mismatch"
+
+
 # ---------------------------------------------------------------------------
 # O'quvchiga ko'rinadigan vazifalar ro'yxati
 # ---------------------------------------------------------------------------
@@ -370,6 +409,30 @@ def test_get_my_assignments_shows_only_homework_sent_to_own_group():
     rows = get_my_assignments(student)
     assert [r.id for r in rows] == [mine.id]
     assert rows[0]._my_submission is None
+
+
+def test_get_my_assignments_includes_both_material_and_presentation():
+    from apps.assignments.selectors import get_my_assignments
+
+    mentor = UserFactory()
+    student, group = _student_in_group_of(mentor)
+    lesson = LessonFactory(module__course=group.course)
+    task_file = course_services.add_file_material(
+        lesson=lesson, file=SimpleUploadedFile("vazifa.pdf", b"%PDF-1.4"),
+        title="Vazifa fayli", kind="task",
+    )
+    presentation = course_services.add_file_material(
+        lesson=lesson, file=SimpleUploadedFile("slayd.pdf", b"%PDF-1.4"),
+        title="Slaydlar", kind="presentation",
+    )
+    services.send_homework(
+        mentor=mentor, lesson=lesson, group=group,
+        instructions={"uz": "Ikkalasi ham"}, material=task_file, presentation=presentation,
+    )
+
+    row = get_my_assignments(student)[0]
+    assert row.material_id == task_file.id
+    assert row.presentation_id == presentation.id
 
 
 def test_get_my_assignments_attaches_own_submission():

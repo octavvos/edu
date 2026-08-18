@@ -21,7 +21,11 @@ export default function HomeworkSendModal({ lesson, sentGroups = [], onSent }) {
   const [deadline, setDeadline] = useState("");
   const [maxScore, setMaxScore] = useState(100);
   const [materialId, setMaterialId] = useState("");
+  const [presentationId, setPresentationId] = useState("");
   const [existing, setExisting] = useState([]);
+
+  const taskMaterials = (lesson.materials || []).filter((m) => m.kind === "task");
+  const presentationMaterials = (lesson.materials || []).filter((m) => m.kind === "presentation");
 
   // Guruhlar va shu darsga allaqachon jo'natilgan vazifalar
   useEffect(() => {
@@ -46,6 +50,7 @@ export default function HomeworkSendModal({ lesson, sentGroups = [], onSent }) {
     setDeadline(previous?.deadline_at ? previous.deadline_at.slice(0, 16) : "");
     setMaxScore(previous?.max_score || 100);
     setMaterialId(previous?.material?.id || "");
+    setPresentationId(previous?.presentation?.id || "");
   }, [groupId, existing]);
 
   function close() {
@@ -73,6 +78,7 @@ export default function HomeworkSendModal({ lesson, sentGroups = [], onSent }) {
         deadlineAt: deadline ? new Date(deadline).toISOString() : null,
         maxScore: Number(maxScore) || 100,
         materialId: materialId || null,
+        presentationId: presentationId || null,
       });
       onSent?.();
       setOpen(false);
@@ -167,15 +173,35 @@ export default function HomeworkSendModal({ lesson, sentGroups = [], onSent }) {
                 </div>
 
                 <div className="field" style={{ marginBottom: 0 }}>
-                  <label>Taqdimot / material biriktirish (ixtiyoriy)</label>
+                  <label>Vazifa fayli (ixtiyoriy)</label>
                   <select value={materialId} onChange={(e) => setMaterialId(e.target.value)} disabled={saving}>
-                    <option value="">Materialsiz — faqat vazifaning o&apos;zi</option>
-                    {(lesson.materials || []).map((m) => (
+                    <option value="">Fayl biriktirilmaydi</option>
+                    {taskMaterials.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.kind === "presentation" ? "Taqdimot" : "Vazifa"}: {m.title || m.original_filename}
+                        {m.title || m.original_filename}
                       </option>
                     ))}
                   </select>
+                  {taskMaterials.length === 0 && (
+                    <p className="small dim mt-1">
+                      Bu darsda &quot;Vazifa&quot; turidagi material yo&apos;q — avval yuklang.
+                    </p>
+                  )}
+                </div>
+
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Taqdimotni ham biriktirish (ixtiyoriy)</label>
+                  <select value={presentationId} onChange={(e) => setPresentationId(e.target.value)} disabled={saving}>
+                    <option value="">Taqdimotsiz</option>
+                    {presentationMaterials.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.title || m.original_filename}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="small dim mt-1">
+                    Tanlansa, vazifa bilan birga taqdimot ham o&apos;quvchiga boradi.
+                  </p>
                 </div>
 
                 {error && <div className="alert alert-danger" style={{ marginBottom: 0 }}>{error}</div>}
