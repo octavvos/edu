@@ -120,6 +120,25 @@ export const mentorApi = {
   grade: (id, payload) => api.post(`/mentor/submissions/${id}/grade/`, payload),
   // O'quvchilar monitoringi
   students: (params) => api.get("/mentor/students/", { params }),
+  // Kontent: material va test
+  courses: () => api.get("/mentor/courses/"),
+  createModule: (courseId, title) => api.post(`/mentor/courses/${courseId}/modules/`, { title }),
+  createLesson: (moduleId, payload) => api.post(`/mentor/modules/${moduleId}/lessons/`, payload),
+  uploadMaterial: (lessonId, file, isDownloadable = true) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("is_downloadable", isDownloadable);
+    return api.post(`/mentor/lessons/${lessonId}/material/`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  createQuiz: (lessonId, settings) => api.post(`/mentor/lessons/${lessonId}/quiz/`, settings),
+  quizDetail: (quizId) => api.get(`/mentor/quizzes/${quizId}/`),
+  updateQuiz: (quizId, settings) => api.put(`/mentor/quizzes/${quizId}/`, settings),
+  quizQuestions: (quizId) => api.get(`/mentor/quizzes/${quizId}/questions/`),
+  addQuestion: (quizId, payload) => api.post(`/mentor/quizzes/${quizId}/questions/`, payload),
+  updateQuestion: (questionId, payload) => api.put(`/mentor/questions/${questionId}/`, payload),
+  deleteQuestion: (questionId) => api.delete(`/mentor/questions/${questionId}/`),
   transfer: (studentId, fromGroupId, toGroupId) =>
     api.post("/mentor/transfer/", {
       student_id: studentId,

@@ -96,6 +96,39 @@ export const Plus = (p) => (
   </svg>
 );
 
+export const Upload = (p) => (
+  <svg {...base} {...p}>
+    <path d="M12 16V4M7 9l5-5 5 5" />
+    <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+  </svg>
+);
+
+export const FileText = (p) => (
+  <svg {...base} {...p}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+    <path d="M14 2v6h6M8 13h8M8 17h8M8 9h2" />
+  </svg>
+);
+
+export const ChevronDown = (p) => (
+  <svg {...base} {...p}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+export const ChevronRight = (p) => (
+  <svg {...base} {...p}>
+    <path d="m9 6 6 6-6 6" />
+  </svg>
+);
+
+export const HelpCircle = (p) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2 2-2 3.5M12 17.5v.01" />
+  </svg>
+);
+
 export const Hourglass = (p) => (
   <svg {...base} {...p}>
     <path d="M7 2h10M7 22h10" />

@@ -11,17 +11,17 @@ class MentorLessonSerializer(serializers.ModelSerializer):
     title = I18nCharField()
     file_asset = FileAssetSerializer(read_only=True)
     video_asset = VideoAssetSerializer(read_only=True)
-    has_quiz = serializers.SerializerMethodField()
+    quiz_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
         fields = (
             "id", "type", "title", "order", "is_required", "is_free_preview",
-            "file_asset", "video_asset", "has_quiz",
+            "file_asset", "video_asset", "quiz_id",
         )
 
-    def get_has_quiz(self, obj) -> bool:
-        return hasattr(obj, "quiz")
+    def get_quiz_id(self, obj) -> str | None:
+        return str(obj.quiz.id) if hasattr(obj, "quiz") else None
 
 
 class MentorModuleSerializer(serializers.ModelSerializer):
