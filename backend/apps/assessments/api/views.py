@@ -34,7 +34,8 @@ class QuizStartView(APIView):
         data = {
             "attempt": AttemptSerializer(attempt).data,
             "questions": QuestionForAttemptSerializer(
-                ordered, many=True, context={"attempt_id": str(attempt.id)},
+                ordered, many=True,
+                context={"attempt_id": str(attempt.id), "request": request},
             ).data,
         }
         return Response(data, status=status.HTTP_201_CREATED)

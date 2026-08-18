@@ -5,11 +5,25 @@ from django.utils.text import slugify
 from apps.audit.services import log_action
 from apps.core.exceptions import DomainError
 from apps.core.models import StatusChoices
-from apps.courses.models import Course, Lesson, Module
+from apps.courses.models import Course, FileAsset, Lesson, Module
 
 
 class CourseError(DomainError):
     pass
+
+
+def assert_mentor_owns_course(*, mentor, course: Course) -> None:
+    """Mentor faqat o'zi biriktirilgan guruhning kursiga material qo'sha oladi."""
+    from apps.courses.selectors import get_mentor_courses
+
+    if mentor.is_superuser:
+        return
+    if not get_mentor_courses(mentor).filter(id=course.id).exists():
+        raise CourseError("Bu kurs sizga biriktirilmagan", code="not_your_course", status_code=403)
+
+
+def assert_can_manage_lesson(*, mentor, lesson: Lesson) -> None:
+    assert_mentor_owns_course(mentor=mentor, course=lesson.module.course)
 
 
 def create_course(*, author, title: dict, category=None, **extra) -> Course:
@@ -41,6 +55,27 @@ def reorder_modules(*, course: Course, ordered_ids: list[str]) -> None:
 def reorder_lessons(*, module: Module, ordered_ids: list[str]) -> None:
     for index, lesson_id in enumerate(ordered_ids, start=1):
         Lesson.objects.filter(module=module, id=lesson_id).update(order=index)
+
+
+def add_file_material(*, lesson: Lesson, file, is_downloadable: bool = True) -> FileAsset:
+    """
+    Material yuklash — hujjat/slayd/qo'shimcha fayl. Haqiqiy S3/MinIO
+    backend orqali saqlanadi (STORAGES["default"]), video kabi tashqi
+    provayder (Bunny) kerak emas.
+    """
+    asset = FileAsset.objects.create(
+        file=file,
+        original_filename=getattr(file, "name", "") or "",
+        mime_type=getattr(file, "content_type", "") or "",
+        size_bytes=getattr(file, "size", 0) or 0,
+        is_downloadable=is_downloadable,
+    )
+    old_asset = lesson.file_asset
+    lesson.file_asset = asset
+    lesson.save(update_fields=["file_asset", "updated_at"])
+    if old_asset:
+        old_asset.delete()  # eski materialni almashtirishda ortiqcha faylni qoldirmaymiz
+    return asset
 
 
 def submit_for_moderation(*, actor, course: Course) -> Course:

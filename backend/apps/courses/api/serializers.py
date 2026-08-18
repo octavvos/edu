@@ -13,7 +13,7 @@ class VideoAssetSerializer(serializers.ModelSerializer):
 class FileAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = FileAsset
-        fields = ("id", "original_filename", "mime_type", "size_bytes", "is_downloadable")
+        fields = ("id", "file", "original_filename", "mime_type", "size_bytes", "is_downloadable")
 
 
 class LessonPublicSerializer(serializers.ModelSerializer):

@@ -27,6 +27,7 @@ PERMISSIONS = [
     ("course.edit", "Kursni tahrirlash"),
     ("course.publish", "Kursni nashr qilish"),
     ("lesson.schedule", "Dars vaqtlarini belgilash"),
+    ("content.manage", "Dars materiallarini yuklash va testlar yaratish"),
     # --- Guruhlar ---
     ("group.create", "Guruh yaratish"),
     ("group.edit", "Guruhni tahrirlash"),
@@ -59,6 +60,7 @@ ROLES = {
             "group.view_own",
             "student.approve", "student.transfer", "student.remove",
             "assignment.grade",
+            "content.manage",
             "report.view",
         ],
     },

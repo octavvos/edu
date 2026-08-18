@@ -5,13 +5,101 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from apps.assessments.models import Answer, Attempt, AttemptStatus, Quiz
+from apps.assessments.models import Answer, Attempt, AttemptStatus, Choice, Question, QuestionType, Quiz
 from apps.assessments.selectors import get_attempt_count, get_latest_attempt
 from apps.core.exceptions import DomainError
 
 
 class AssessmentError(DomainError):
     pass
+
+
+# ---------------------------------------------------------------------------
+# Mentor: test yaratish/tahrirlash (T01-T07)
+# ---------------------------------------------------------------------------
+
+CHOICE_BASED_TYPES = {QuestionType.SINGLE_CHOICE, QuestionType.MULTIPLE_CHOICE, QuestionType.TRUE_FALSE}
+
+
+def create_quiz(*, lesson, **fields) -> Quiz:
+    if hasattr(lesson, "quiz"):
+        raise AssessmentError("Bu darsda test allaqachon mavjud", code="quiz_exists")
+    return Quiz.objects.create(lesson=lesson, **fields)
+
+
+def update_quiz(*, quiz: Quiz, **fields) -> Quiz:
+    for key, value in fields.items():
+        setattr(quiz, key, value)
+    quiz.save()
+    return quiz
+
+
+def _validate_choices(question_type: str, choices: list[dict]) -> None:
+    if question_type not in CHOICE_BASED_TYPES:
+        return
+    if len(choices) < 2:
+        raise AssessmentError("Kamida 2 ta variant kerak", code="not_enough_choices")
+
+    correct_count = sum(1 for c in choices if c.get("is_correct"))
+    if question_type in (QuestionType.SINGLE_CHOICE, QuestionType.TRUE_FALSE):
+        if correct_count != 1:
+            raise AssessmentError(
+                "Bu turdagi savolda aynan bitta to'g'ri javob belgilanishi kerak",
+                code="invalid_correct_count",
+            )
+    elif question_type == QuestionType.MULTIPLE_CHOICE and correct_count == 0:
+        raise AssessmentError(
+            "Kamida bitta to'g'ri javob belgilanishi kerak", code="invalid_correct_count",
+        )
+
+
+@transaction.atomic
+def add_question(*, quiz: Quiz, type: str, text: dict, points: int = 1,  # noqa: A002
+                 explanation: dict | None = None, correct_text_pattern: str = "",
+                 is_regex: bool = False, choices: list[dict] | None = None) -> Question:
+    choices = choices or []
+    _validate_choices(type, choices)
+    if type == QuestionType.SHORT_TEXT and not correct_text_pattern:
+        raise AssessmentError("To'g'ri javob namunasi kiritilishi kerak", code="pattern_required")
+
+    order = quiz.questions.count() + 1
+    question = Question.objects.create(
+        quiz=quiz, type=type, text=text, explanation=explanation or {}, points=points,
+        order=order, correct_text_pattern=correct_text_pattern, is_regex=is_regex,
+    )
+    if choices:
+        Choice.objects.bulk_create([
+            Choice(question=question, text=c["text"], is_correct=bool(c.get("is_correct")), order=i)
+            for i, c in enumerate(choices)
+        ])
+    return question
+
+
+@transaction.atomic
+def update_question(*, question: Question, choices: list[dict] | None = None, **fields) -> Question:
+    question_type = fields.get("type", question.type)
+    if choices is not None:
+        _validate_choices(question_type, choices)
+    if fields.get("type") == QuestionType.SHORT_TEXT and not fields.get(
+        "correct_text_pattern", question.correct_text_pattern,
+    ):
+        raise AssessmentError("To'g'ri javob namunasi kiritilishi kerak", code="pattern_required")
+
+    for key, value in fields.items():
+        setattr(question, key, value)
+    question.save()
+
+    if choices is not None:
+        question.choices.all().delete()
+        Choice.objects.bulk_create([
+            Choice(question=question, text=c["text"], is_correct=bool(c.get("is_correct")), order=i)
+            for i, c in enumerate(choices)
+        ])
+    return question
+
+
+def delete_question(*, question: Question) -> None:
+    question.delete()
 
 
 @transaction.atomic

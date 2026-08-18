@@ -282,11 +282,19 @@ STORAGES = {
 AWS_ACCESS_KEY_ID = env("MINIO_ACCESS_KEY", default="minioadmin")
 AWS_SECRET_ACCESS_KEY = env("MINIO_SECRET_KEY", default="minioadmin")
 AWS_STORAGE_BUCKET_NAME = env("MINIO_BUCKET", default="edu-platform")
+# Ichki (konteynerlar orasi) endpoint — yuklash/o'chirish so'rovlari shu orqali ketadi.
 AWS_S3_ENDPOINT_URL = env("MINIO_ENDPOINT", default="http://localhost:9000")
 AWS_S3_ADDRESSING_STYLE = "path"
 AWS_DEFAULT_ACL = None
 AWS_QUERYSTRING_AUTH = True
 AWS_QUERYSTRING_EXPIRE = 900  # V-06: signed URL TTL <= 15 daqiqa
+
+# Brauzerga qaytariladigan fayl havolalari uchun TASHQI (host'dan ochiladigan)
+# manzil — ichki "minio:9000" kabi Docker xizmat nomi brauzerda resolve
+# bo'lmaydi. custom_domain berilganda django-storages imzosiz ochiq URL
+# qaytaradi (bucket policy allaqachon "download" — public-read).
+AWS_S3_CUSTOM_DOMAIN = env("MINIO_PUBLIC_ENDPOINT", default="localhost:9000") + "/" + AWS_STORAGE_BUCKET_NAME
+AWS_S3_URL_PROTOCOL = "http:"
 
 # ---------------------------------------------------------------------------
 # CORS

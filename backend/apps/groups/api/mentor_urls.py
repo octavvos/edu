@@ -2,7 +2,9 @@
 
 from django.urls import path
 
+from apps.assessments.api import mentor_views as quiz_views
 from apps.assignments.api import views as assignment_views
+from apps.courses.api import mentor_views as content_views
 from apps.groups.api import views
 
 urlpatterns = [
@@ -14,6 +16,22 @@ urlpatterns = [
          name="mentor-submission-grade"),
     # O'quvchilar monitoringi
     path("students/", assignment_views.MentorStudentsView.as_view(), name="mentor-students"),
+    # Kurs kontenti: modul/dars/material (apps.courses)
+    path("courses/", content_views.MentorCourseListView.as_view(), name="mentor-courses"),
+    path("courses/<uuid:course_id>/modules/", content_views.MentorModuleCreateView.as_view(),
+         name="mentor-course-modules"),
+    path("modules/<uuid:module_id>/lessons/", content_views.MentorLessonCreateView.as_view(),
+         name="mentor-module-lessons"),
+    path("lessons/<uuid:lesson_id>/material/", content_views.MentorMaterialUploadView.as_view(),
+         name="mentor-lesson-material"),
+    # Testlar (apps.assessments)
+    path("lessons/<uuid:lesson_id>/quiz/", quiz_views.MentorQuizCreateView.as_view(),
+         name="mentor-lesson-quiz"),
+    path("quizzes/<uuid:quiz_id>/", quiz_views.MentorQuizDetailView.as_view(), name="mentor-quiz-detail"),
+    path("quizzes/<uuid:quiz_id>/questions/", quiz_views.MentorQuestionListCreateView.as_view(),
+         name="mentor-quiz-questions"),
+    path("questions/<uuid:question_id>/", quiz_views.MentorQuestionDetailView.as_view(),
+         name="mentor-question-detail"),
     path("groups/", views.MentorGroupListView.as_view(), name="mentor-groups"),
     path("groups/<uuid:group_id>/members/", views.MentorGroupMembersView.as_view(),
          name="mentor-group-members"),

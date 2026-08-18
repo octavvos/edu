@@ -146,6 +146,24 @@ vaqt va tekshirilmagan topshiriqlar. "Xavf ostida" mezonlari
 
 Xavf ostidagilar ro'yxat tepasida, har biri **sababi bilan** ko'rsatiladi.
 
+**Kontent boshqaruvi** — mentor o'ziga biriktirilgan guruh(lar)ning kursiga
+material yuklaydi va test ochadi (`content.manage` huquqi):
+
+- `POST /mentor/courses/{course_id}/modules/` — modul qo'shish
+- `POST /mentor/modules/{module_id}/lessons/` — dars qo'shish (video/matn/fayl/test/uy vazifasi)
+- `POST /mentor/lessons/{lesson_id}/material/` — fayl material yuklash (multipart, haqiqiy MinIO/S3'ga saqlanadi)
+- `POST /mentor/lessons/{lesson_id}/quiz/` — darsga test ochish
+- `POST /mentor/quizzes/{quiz_id}/questions/` — savol qo'shish (4 turi: bitta/ko'p tanlovli, to'g'ri/noto'g'ri, qisqa matn)
+
+Egalik `Course.author` orqali emas (buni manager qiladi), balki **mentor
+biriktirilgan guruhning kursi** orqali tekshiriladi
+(`apps/courses/selectors.py::get_mentor_courses`). Boshqa mentor/manager
+kontentiga urinish 403 bilan rad etiladi.
+
+> Video material yuklash Bunny Stream provayderiga bog'liq (D-11) — haqiqiy
+> `BUNNY_STREAM_*` kalitlari `.env`ga qo'shilmaguncha ishlamaydi. Fayl
+> (hujjat/slayd) materiallar esa MinIO orqali to'liq ishlaydi.
+
 ## Lokal ishga tushirish (Docker'siz)
 
 ### Backend

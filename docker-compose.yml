@@ -45,6 +45,30 @@ services:
       timeout: 5s
       retries: 5
 
+  # Bir martalik: media bucket'ini yaratadi va ochiq o'qishga ruxsat beradi
+  # (MINIO_BUCKET .env'da belgilangan nom bilan mos). Backend/Celery shu
+  # bucket bo'lishiga tayanadi (STORAGES["default"] = S3Storage) — bucket
+  # bo'lmasa fayl yuklash NoSuchBucket xatosi bilan buziladi.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-edu-platform}
+    entrypoint: ["sh", "-c"]
+    # command YAML ro'yxat (list) sifatida — bitta butun skript bitta arg
+    # bo'lib "sh -c"ga uzatiladi; oddiy ko'p qatorli satr compose tomonidan
+    # bo'shliqlar bo'yicha alohida arglarga bo'linib ketardi.
+    command:
+      - >
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb -p local/"$$MINIO_BUCKET" &&
+        mc anonymous set download local/"$$MINIO_BUCKET"
+    restart: "no"
+
   backend:
     build:
       context: ./backend
@@ -64,6 +88,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&

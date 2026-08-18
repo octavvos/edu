@@ -3,15 +3,19 @@ import random
 from rest_framework import serializers
 
 from apps.assessments.models import Attempt, Choice, Question
+from apps.core.fields import I18nCharField
 
 
 class ChoiceForAttemptSerializer(serializers.ModelSerializer):
+    text = I18nCharField()
+
     class Meta:
         model = Choice
         fields = ("id", "text")  # is_correct qaytarilmaydi — T-02
 
 
 class QuestionForAttemptSerializer(serializers.ModelSerializer):
+    text = I18nCharField()
     choices = serializers.SerializerMethodField()
 
     class Meta:
@@ -25,7 +29,7 @@ class QuestionForAttemptSerializer(serializers.ModelSerializer):
             # yangilanganda tartib o'zgarib ketmaydi (T-02).
             seed = self.context.get("attempt_id", "")
             random.Random(f"{seed}:{obj.id}").shuffle(choices)
-        return ChoiceForAttemptSerializer(choices, many=True).data
+        return ChoiceForAttemptSerializer(choices, many=True, context=self.context).data
 
 
 class AttemptSerializer(serializers.ModelSerializer):
