@@ -5,7 +5,7 @@ from rest_framework import serializers
 from apps.core.fields import I18nCharField
 from apps.courses.api.serializers import FileAssetSerializer, VideoAssetSerializer
 from apps.courses.constants import ALLOWED_MATERIAL_EXTENSIONS, MAX_MATERIAL_SIZE_BYTES, MAX_MATERIAL_SIZE_MB
-from apps.courses.models import Course, Lesson, LessonType, Module
+from apps.courses.models import Course, Lesson, LessonType, MaterialKind, Module
 
 
 class MentorLessonSerializer(serializers.ModelSerializer):
@@ -60,6 +60,7 @@ class MaterialUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
     title = serializers.CharField(max_length=255)
     description = serializers.CharField(required=False, allow_blank=True, default="")
+    kind = serializers.ChoiceField(choices=MaterialKind.choices)
     is_downloadable = serializers.BooleanField(default=True)
 
     def validate_file(self, value):

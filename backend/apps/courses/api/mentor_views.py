@@ -105,6 +105,7 @@ class MentorMaterialUploadView(APIView):
             file=serializer.validated_data["file"],
             title=serializer.validated_data["title"],
             description=serializer.validated_data.get("description", ""),
+            kind=serializer.validated_data["kind"],
             is_downloadable=serializer.validated_data["is_downloadable"],
         )
         lesson.refresh_from_db()

@@ -5,7 +5,7 @@ import AppShell from "../../../components/AppShell";
 import { Book, Check, ChevronDown, ChevronRight, FileText, X } from "../../../components/Icons";
 import MaterialUploadModal from "../../../components/mentor/MaterialUploadModal";
 import { errorMessage, mentorApi } from "../../../lib/api";
-import { MAX_MATERIAL_SIZE_MB } from "../../../lib/materials";
+import { MATERIAL_KIND_LABEL, MAX_MATERIAL_SIZE_MB } from "../../../lib/materials";
 import { useAuth } from "../../../lib/auth";
 
 const LESSON_TYPE_LABEL = {
@@ -253,8 +253,13 @@ function MaterialPanel({ lesson, onChanged, onError }) {
               >
                 <FileText width={15} height={15} style={{ flexShrink: 0 }} />
                 <span style={{ minWidth: 0, overflow: "hidden" }}>
-                  <span className="strong" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {material.title || material.original_filename}
+                  <span className="row" style={{ gap: 6 }}>
+                    <span className="strong" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {material.title || material.original_filename}
+                    </span>
+                    <span className="chip" style={{ fontSize: 11, flexShrink: 0 }}>
+                      {MATERIAL_KIND_LABEL[material.kind] || material.kind}
+                    </span>
                   </span>
                   {material.description && (
                     <span className="dim" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

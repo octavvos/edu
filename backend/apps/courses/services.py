@@ -5,7 +5,7 @@ from django.utils.text import slugify
 from apps.audit.services import log_action
 from apps.core.exceptions import DomainError
 from apps.core.models import StatusChoices
-from apps.courses.models import Course, FileAsset, Lesson, Module
+from apps.courses.models import Course, FileAsset, Lesson, MaterialKind, Module
 
 
 class CourseError(DomainError):
@@ -59,6 +59,7 @@ def reorder_lessons(*, module: Module, ordered_ids: list[str]) -> None:
 
 def add_file_material(
     *, lesson: Lesson, file, is_downloadable: bool = True, title: str = "", description: str = "",
+    kind: str = MaterialKind.PRESENTATION,
 ) -> FileAsset:
     """
     Material yuklash — hujjat/slayd/qo'shimcha fayl. Haqiqiy S3/MinIO
@@ -73,6 +74,7 @@ def add_file_material(
         file=file,
         title=title,
         description=description,
+        kind=kind,
         original_filename=getattr(file, "name", "") or "",
         mime_type=getattr(file, "content_type", "") or "",
         size_bytes=getattr(file, "size", 0) or 0,

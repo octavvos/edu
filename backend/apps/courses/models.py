@@ -179,6 +179,13 @@ class VideoAsset(BaseModel):
         return min(100.0, (self.total_watched_seconds / self.view_count) / self.duration_seconds * 100)
 
 
+class MaterialKind(models.TextChoices):
+    """Material filtrlash uchun: taqdimotmi yoki vazifami."""
+
+    PRESENTATION = "presentation", "Taqdimot"
+    TASK = "task", "Vazifa"
+
+
 class FileAsset(BaseModel):
     """
     Darsga biriktirilgan qo'shimcha material (slayd, hujjat va h.k.).
@@ -190,6 +197,7 @@ class FileAsset(BaseModel):
     )
     title = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
+    kind = models.CharField(max_length=20, choices=MaterialKind.choices, default=MaterialKind.PRESENTATION)
     file = models.FileField(upload_to="courses/files/")
     original_filename = models.CharField(max_length=255)
     mime_type = models.CharField(max_length=100, blank=True)

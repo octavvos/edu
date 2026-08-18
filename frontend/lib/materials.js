@@ -9,6 +9,13 @@ export const MAX_MATERIAL_SIZE_BYTES = MAX_MATERIAL_SIZE_MB * 1024 * 1024;
 
 export const MATERIAL_ACCEPT = ALLOWED_MATERIAL_EXTENSIONS.map((ext) => `.${ext}`).join(",");
 
+/** Backend apps/courses/models.py::MaterialKind bilan mos — filtrlash uchun. */
+export const MATERIAL_KIND_OPTIONS = [
+  { value: "presentation", label: "Taqdimot" },
+  { value: "task", label: "Vazifa" },
+];
+export const MATERIAL_KIND_LABEL = Object.fromEntries(MATERIAL_KIND_OPTIONS.map((o) => [o.value, o.label]));
+
 /** Yuklashdan oldin tekshiradi — noto'g'ri bo'lsa xabar qaytaradi, to'g'ri bo'lsa null. */
 export function validateMaterialFile(file) {
   const ext = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";

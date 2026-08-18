@@ -5,6 +5,7 @@ import {
   Check, ChevronDown, ChevronRight, FileText, HelpCircle, Plus, X,
 } from "../Icons";
 import { errorMessage, mentorApi } from "../../lib/api";
+import { MATERIAL_KIND_LABEL } from "../../lib/materials";
 import MaterialUploadModal from "./MaterialUploadModal";
 
 const LESSON_TYPES = [
@@ -245,6 +246,9 @@ function LessonRow({ lesson, onChanged, onError }) {
             >
               <FileText width={14} height={14} />
               {material.title || material.original_filename}
+              <span className="chip" style={{ fontSize: 11 }}>
+                {MATERIAL_KIND_LABEL[material.kind] || material.kind}
+              </span>
               <span className="dim">({formatSize(material.size_bytes)})</span>
             </a>
           ))}

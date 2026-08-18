@@ -14,7 +14,7 @@ class FileAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = FileAsset
         fields = (
-            "id", "file", "title", "description", "original_filename",
+            "id", "file", "title", "description", "kind", "original_filename",
             "mime_type", "size_bytes", "is_downloadable",
         )
 

@@ -115,7 +115,7 @@ def test_material_upload_accepts_allowed_extension():
     from apps.courses.api.mentor_serializers import MaterialUploadSerializer
 
     upload = SimpleUploadedFile("dars.pdf", b"%PDF-1.4", content_type="application/pdf")
-    serializer = MaterialUploadSerializer(data={"file": upload, "title": "Dars slaydlari"})
+    serializer = MaterialUploadSerializer(data={"file": upload, "title": "Dars slaydlari", "kind": "presentation"})
 
     assert serializer.is_valid(), serializer.errors
 
@@ -129,6 +129,28 @@ def test_material_upload_rejects_oversized_file():
 
     assert not serializer.is_valid()
     assert "file" in serializer.errors
+
+
+def test_material_upload_rejects_missing_kind():
+    from apps.courses.api.mentor_serializers import MaterialUploadSerializer
+
+    upload = SimpleUploadedFile("dars.pdf", b"%PDF-1.4", content_type="application/pdf")
+    serializer = MaterialUploadSerializer(data={"file": upload, "title": "Dars slaydlari"})
+
+    assert not serializer.is_valid()
+    assert "kind" in serializer.errors
+
+
+def test_material_upload_rejects_invalid_kind():
+    from apps.courses.api.mentor_serializers import MaterialUploadSerializer
+
+    upload = SimpleUploadedFile("dars.pdf", b"%PDF-1.4", content_type="application/pdf")
+    serializer = MaterialUploadSerializer(
+        data={"file": upload, "title": "Dars slaydlari", "kind": "not-a-real-kind"},
+    )
+
+    assert not serializer.is_valid()
+    assert "kind" in serializer.errors
 
 
 def test_add_module_and_lesson_via_services():

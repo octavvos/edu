@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FileText, Upload, X } from "../Icons";
 import { errorMessage, mentorApi } from "../../lib/api";
-import { MATERIAL_ACCEPT, validateMaterialFile } from "../../lib/materials";
+import { MATERIAL_ACCEPT, MATERIAL_KIND_OPTIONS, validateMaterialFile } from "../../lib/materials";
 
 /**
  * Fayl tanlashdan oldin taqdimot/vazifa nomi va izohini so'raydigan forma.
@@ -13,6 +13,7 @@ export default function MaterialUploadModal({ lessonId, label = "Fayl tanlash", 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [kind, setKind] = useState(null);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -21,6 +22,7 @@ export default function MaterialUploadModal({ lessonId, label = "Fayl tanlash", 
   function reset() {
     setTitle("");
     setDescription("");
+    setKind(null);
     setFile(null);
     setError(null);
     setDragOver(false);
@@ -49,6 +51,10 @@ export default function MaterialUploadModal({ lessonId, label = "Fayl tanlash", 
       setError("Nomini kiriting");
       return;
     }
+    if (!kind) {
+      setError("Turini tanlang");
+      return;
+    }
     if (!file) {
       setError("Faylni tanlang");
       return;
@@ -56,7 +62,7 @@ export default function MaterialUploadModal({ lessonId, label = "Fayl tanlash", 
     setUploading(true);
     setError(null);
     try {
-      await mentorApi.uploadMaterial(lessonId, file, { title: title.trim(), description: description.trim() });
+      await mentorApi.uploadMaterial(lessonId, file, { title: title.trim(), description: description.trim(), kind });
       onUploaded?.();
       setOpen(false);
       reset();
@@ -95,6 +101,23 @@ export default function MaterialUploadModal({ lessonId, label = "Fayl tanlash", 
                   disabled={uploading}
                   style={{ marginTop: 4, marginBottom: 0 }}
                 />
+              </div>
+
+              <div>
+                <label className="small strong">Turi</label>
+                <div className="row mt-1" style={{ gap: 6 }}>
+                  {MATERIAL_KIND_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`btn btn-sm ${kind === opt.value ? "" : "btn-ghost"}`}
+                      onClick={() => setKind(opt.value)}
+                      disabled={uploading}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
