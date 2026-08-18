@@ -1,10 +1,12 @@
 from rest_framework import serializers
 
 from apps.catalog.models import Category, Review
+from apps.core.fields import I18nCharField
 
 
 class CategorySerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
+    name = I18nCharField()
 
     class Meta:
         model = Category
@@ -20,10 +22,12 @@ class CourseCardSerializer(serializers.Serializer):
 
     id = serializers.UUIDField()
     slug = serializers.CharField()
-    title = serializers.JSONField()
+    title = I18nCharField()
+    description = I18nCharField()
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
     currency = serializers.CharField()
     level = serializers.CharField()
+    level_display = serializers.CharField(source="get_level_display")
     rating_avg = serializers.FloatField()
     rating_count = serializers.IntegerField()
     enrollment_count = serializers.IntegerField()
@@ -31,7 +35,7 @@ class CourseCardSerializer(serializers.Serializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_name = serializers.CharField(source="user.display_name", read_only=True)
 
     class Meta:
         model = Review

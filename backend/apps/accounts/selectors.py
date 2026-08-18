@@ -4,9 +4,12 @@ from apps.accounts.models import OTPCode, User, UserSession
 
 
 def find_user_by_identifier(identifier: str) -> User | None:
-    return User.objects.filter(phone=identifier).first() or User.objects.filter(
-        email__iexact=identifier,
-    ).first()
+    """Username birinchi navbatda — asosiy kirish usuli; telefon/email zaxira."""
+    return (
+        User.objects.filter(username__iexact=identifier).first()
+        or User.objects.filter(phone=identifier).first()
+        or User.objects.filter(email__iexact=identifier).first()
+    )
 
 
 def get_latest_otp(phone: str, purpose: str) -> OTPCode | None:

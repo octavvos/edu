@@ -33,6 +33,16 @@ def enroll_from_payment(*, user, course, order_id: str) -> Enrollment:
     return _create_enrollment(user=user, course=course, access_type=AccessType.PURCHASED, order_id=order_id)
 
 
+@transaction.atomic
+def enroll_by_group_admission(*, user, course) -> Enrollment:
+    """
+    D-07: mentor o'quvchini guruhga qabul qilganda apps.groups
+    EVENT_STUDENT_ADMITTED chiqaradi, apps.enrollment.handlers shuni ushlab
+    kursga yozadi — groups moduli enrollment'ni to'g'ridan-to'g'ri chaqirmaydi.
+    """
+    return _create_enrollment(user=user, course=course, access_type=AccessType.ADMIN_GRANTED)
+
+
 def _create_enrollment(*, user, course, access_type: str, order_id: str | None = None) -> Enrollment:
     existing = get_enrollment(user=user, course=course)
     if existing and existing.status == EnrollmentStatus.ACTIVE:

@@ -30,6 +30,7 @@ backend/
 │   ├── audit/           # AuditLog (append-only), impersonation
 │   ├── catalog/         # Category, Review, qidiruv, tavsiyalar
 │   ├── courses/         # Course, Module, Lesson, CourseVersion, VideoAsset, FileAsset
+│   ├── groups/          # Group, GroupSchedule, GroupMembership, JoinRequest
 │   ├── enrollment/      # Enrollment, Progress, drip-content, playback token
 │   ├── assessments/     # Quiz, Question, Attempt, Answer
 │   ├── assignments/     # Homework, Submission, Grade, gradebook
@@ -60,20 +61,44 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Ishga tushgandan so'ng:
+Ishga tushgandan so'ng (barcha yo'llar nginx orqali, 8080-portda):
 
-- Frontend: http://localhost:3000 (yoki http://localhost orqali nginx)
-- Backend API: http://localhost:8000/api/v1/
-- Swagger UI: http://localhost:8000/api/schema/swagger-ui/
-- Django Admin: http://localhost:8000/admin/
+- Sayt: http://localhost:8080
+- Backend API: http://localhost:8080/api/v1/
+- Swagger UI: http://localhost:8080/api/schema/swagger-ui/
+- Django Admin: http://localhost:8080/admin/
 - MinIO konsol: http://localhost:9001
 
 Birinchi marta ishga tushirishda:
 
 ```bash
+docker compose exec backend python manage.py seed_rbac    # 3 ta rol va huquqlar
+docker compose exec backend python manage.py seed_demo    # demo kurs, guruhlar, manager/mentor
 docker compose exec backend python manage.py createsuperuser
-docker compose exec backend python manage.py seed_rbac   # 6 ta rol va huquqlarni yaratadi
 ```
+
+`seed_demo` quyidagi demo hisoblarni yaratadi (parol `demo1234`):
+`manager` — kurs va guruhlarni boshqaradi, `mentor` — so'rovlarni tasdiqlaydi.
+
+## Rollar va ro'yxatdan o'tish oqimi
+
+Tizimda **3 ta rol** bor:
+
+| Rol | Vazifasi |
+|-----|----------|
+| **manager** | Kurs ochadi, guruh yaratadi, dars vaqtlarini belgilaydi, guruhga mentor biriktiradi |
+| **mentor** | O'z guruhlariga kelgan ro'yxatdan o'tish so'rovlarini tasdiqlaydi/rad etadi, o'quvchilarni guruhlar orasida ko'chiradi |
+| **o'quvchi** | Ro'yxatdan o'tib guruh tanlaydi; mentor tasdiqlagach guruh kursini ko'radi |
+
+Ro'yxatdan o'tish oqimi:
+
+1. Mehmon **faqat** login/register sahifasini ko'radi — kurslar autentifikatsiyasiz **yopiq**.
+2. O'quvchi ism, familiya, username va parol (kamida 4 belgi) kiritadi va **guruhni tanlaydi**.
+3. Hisob `pending` holatda ochiladi — o'quvchi tizimga kira oladi, lekin kurslarni ko'ra olmaydi.
+4. Mentor so'rovni ko'rib chiqib **tasdiqlaydi** → o'quvchi guruhga qo'shiladi va kursga yoziladi.
+
+> Telefon+OTP orqali kirish faqat **mavjud** hisob uchun ishlaydi — u orqali
+> yangi hisob ochib bo'lmaydi, aks holda mentor tasdig'ini chetlab o'tish mumkin bo'lardi.
 
 ## Lokal ishga tushirish (Docker'siz)
 
@@ -132,7 +157,7 @@ bandit -r apps config libs -x '*/tests/*,*/migrations/*'
 
 - **Qatlamlanish**: `models.py` faqat struktura, `selectors.py` — o'qish, `services.py` — barcha yozish. View'lar yupqa, biznes-logikasiz.
 - **Domain event'lar**: modullar bir-birining model/service'ini to'g'ridan-to'g'ri import qilmaydi (masalan `payments` va `enrollment`) — `apps/core/events.py` orqali gaplashadi.
-- **RBAC**: granular permission (`course.publish`, `payment.refund`, ...), scope (`global`/`course`/`organization`). Yangi rol — faqat admin paneldan, kod o'zgarishisiz.
+- **RBAC**: granular permission (`group.create`, `student.approve`, ...), scope (`global`/`course`/`organization`). Yangi rol — faqat admin paneldan, kod o'zgarishisiz.
 - **Ledger**: barcha pul harakati double-entry, append-only (`apps/payments/models.py::LedgerEntry`). Balans hech qachon alohida saqlanmaydi — har doim ledger'dan hisoblanadi.
 - **Kelajakka tayyorlik (D01-D12)**: UUID PK, `organization_id` (B2B), JSONB i18n, video provayder abstraksiyasi va h.k. — TZ 5.5.1-bandga qarang.
 

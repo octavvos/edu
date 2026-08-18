@@ -8,10 +8,14 @@ from django.db import models
 from django.utils import timezone
 
 from apps.accounts.managers import UserManager
+from apps.accounts.validators import UsernameValidator
 from apps.core.models import TimeStampedModel, UUIDModel
 
 
 class UserStatus(models.TextChoices):
+    # Ro'yxatdan o'tgan, lekin mentor hali guruhga qabul qilmagan o'quvchi.
+    # Bunday foydalanuvchi tizimga kira oladi, ammo hech qanday kursni ko'ra olmaydi.
+    PENDING = "pending", "Mentor tasdig'i kutilmoqda"
     ACTIVE = "active", "Faol"
     BLOCKED = "blocked", "Bloklangan"
     PENDING_DELETION = "pending_deletion", "O'chirish kutilmoqda"  # U-06
@@ -31,15 +35,26 @@ class Theme(models.TextChoices):
 class User(AbstractBaseUser, PermissionsMixin, UUIDModel, TimeStampedModel):
     """
     D-01: UUID PK. D-02: organization_id (B2B tayyorgarlik). D-12: utm_source.
-    USERNAME_FIELD = "phone" — A-01/A-04: asosiy usul telefon+OTP (1.3-band).
-    Email+parol bilan ro'yxatdan o'tish `EmailOrPhoneBackend` orqali qo'llab-quvvatlanadi.
+
+    USERNAME_FIELD = "username" — asosiy kirish usuli username+parol.
+    Telefon/email ixtiyoriy qo'shimcha maydonlar bo'lib qoladi (OTP oqimi
+    saqlanib turibdi), lekin ro'yxatdan o'tish username orqali boradi.
     """
+
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+        validators=[UsernameValidator()],
+        help_text="Kamida 4 belgi: harf, raqam va _ . - belgilari",
+    )
 
     phone = models.CharField(max_length=20, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True, null=True, blank=True)
     is_phone_verified = models.BooleanField(default=False)
     is_email_verified = models.BooleanField(default=False)
 
+    first_name = models.CharField(max_length=75, blank=True)  # ism
+    last_name = models.CharField(max_length=75, blank=True)  # familiya
     full_name = models.CharField(max_length=150, blank=True)
     avatar = models.FileField(upload_to="avatars/", null=True, blank=True)
     birth_date = models.DateField(null=True, blank=True)
@@ -73,7 +88,7 @@ class User(AbstractBaseUser, PermissionsMixin, UUIDModel, TimeStampedModel):
 
     objects = UserManager()
 
-    USERNAME_FIELD = "phone"
+    USERNAME_FIELD = "username"
     REQUIRED_FIELDS: list[str] = []
 
     class Meta:
@@ -84,7 +99,17 @@ class User(AbstractBaseUser, PermissionsMixin, UUIDModel, TimeStampedModel):
         ]
 
     def __str__(self):
-        return self.full_name or self.phone or self.email or str(self.id)
+        return self.display_name
+
+    @property
+    def display_name(self) -> str:
+        full = f"{self.first_name} {self.last_name}".strip()
+        return full or self.full_name or self.username
+
+    @property
+    def is_pending_approval(self) -> bool:
+        """Mentor hali guruhga qabul qilmagan — kurslarga kirish yopiq."""
+        return self.status == UserStatus.PENDING
 
     @property
     def is_locked(self) -> bool:

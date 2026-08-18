@@ -1,10 +1,10 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1";
 
 export const api = axios.create({ baseURL: API_BASE_URL });
 
-// --- Token saqlash (A-02: access 15 daq, refresh 30 kun) -------------------
+// --- Token saqlash --------------------------------------------------------
 export function getTokens() {
   if (typeof window === "undefined") return { access: null, refresh: null };
   return {
@@ -23,6 +23,22 @@ export function clearTokens() {
   if (typeof window === "undefined") return;
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user");
+}
+
+// --- Keshlangan profil (sahifa yangilanganda rolni darhol bilish uchun) ---
+export function getCachedUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+export function setCachedUser(user) {
+  if (typeof window === "undefined") return;
+  if (user) localStorage.setItem("user", JSON.stringify(user));
 }
 
 api.interceptors.request.use((config) => {
@@ -31,14 +47,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// --- A-03: refresh rotation — 401 bo'lsa bitta marta yangilashga urinadi ---
+// --- Refresh rotation: 401 bo'lsa bitta marta yangilashga urinadi ---------
 let refreshPromise = null;
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true;
       const { refresh } = getTokens();
       if (!refresh) {
@@ -66,47 +82,61 @@ api.interceptors.response.use(
   },
 );
 
-// --- Yordamchi funksiyalar (TZ 5.6 endpoint guruhlari) ---------------------
+/** Backend RFC7807 yoki {detail: ...} qaytaradi — ikkalasini ham o'qiydi. */
+export function errorMessage(err, fallback = "Xatolik yuz berdi") {
+  const data = err?.response?.data;
+  if (!data) return err?.message || fallback;
+  if (typeof data === "string") return data;
+  if (data.detail) return data.detail;
+  if (data.title) return data.title;
+  const firstField = Object.values(data).find((v) => Array.isArray(v) && v.length);
+  if (firstField) return firstField[0];
+  return fallback;
+}
+
+// --- Endpointlar ----------------------------------------------------------
+
 export const authApi = {
-  sendOtp: (phone) => api.post("/auth/otp/send/", { phone }),
-  verifyOtp: (phone, code, deviceId) => api.post("/auth/otp/verify/", { phone, code, device_id: deviceId }),
-  registerEmail: (email, password, fullName) =>
-    api.post("/auth/register/", { email, password, full_name: fullName }),
-  login: (identifier, password, deviceId) =>
-    api.post("/auth/login/", { identifier, password, device_id: deviceId }),
+  login: (identifier, password) => api.post("/auth/login/", { identifier, password }),
+  register: (payload) => api.post("/auth/register/", payload),
   logout: (refresh) => api.post("/auth/logout/", { refresh }),
+  me: () => api.get("/me/profile/"),
+};
+
+export const groupsApi = {
+  open: () => api.get("/groups/open/"),
+  my: () => api.get("/groups/my/"),
+};
+
+export const mentorApi = {
+  groups: () => api.get("/mentor/groups/"),
+  members: (groupId) => api.get(`/mentor/groups/${groupId}/members/`),
+  requests: () => api.get("/mentor/requests/"),
+  approve: (id) => api.post(`/mentor/requests/${id}/approve/`),
+  reject: (id, note) => api.post(`/mentor/requests/${id}/reject/`, { note }),
+  transfer: (studentId, fromGroupId, toGroupId) =>
+    api.post("/mentor/transfer/", {
+      student_id: studentId,
+      from_group_id: fromGroupId,
+      to_group_id: toGroupId,
+    }),
+  remove: (groupId, studentId) =>
+    api.post(`/mentor/groups/${groupId}/students/${studentId}/remove/`),
+};
+
+export const managerApi = {
+  groups: () => api.get("/manager/groups/"),
+  createGroup: (payload) => api.post("/manager/groups/", payload),
+  setSchedule: (groupId, slots) => api.put(`/manager/groups/${groupId}/schedule/`, slots),
+  assignMentor: (groupId, mentorId) =>
+    api.post(`/manager/groups/${groupId}/mentor/`, { mentor_id: mentorId }),
 };
 
 export const catalogApi = {
+  courses: (params) => api.get("/catalog/courses/", { params }),
   categories: () => api.get("/catalog/categories/"),
-  searchCourses: (params) => api.get("/catalog/courses/", { params }),
-};
-
-export const courseApi = {
-  detail: (slug) => api.get(`/courses/${slug}/`),
-  preview: (slug) => api.get(`/courses/${slug}/preview/`),
-  enroll: (slug) => api.post(`/courses/${slug}/enroll/`),
 };
 
 export const meApi = {
-  profile: () => api.get("/me/profile/"),
   courses: () => api.get("/me/courses/"),
-  certificates: () => api.get("/me/certificates/"),
-  payments: () => api.get("/me/payments/"),
-};
-
-export const learnApi = {
-  lesson: (enrollmentId, lessonId) => api.get(`/learn/${enrollmentId}/lessons/${lessonId}/`),
-  playbackToken: (enrollmentId, lessonId) => api.get(`/learn/${enrollmentId}/lessons/${lessonId}/playback-token/`),
-  updateProgress: (enrollmentId, lessonId, payload) =>
-    api.post(`/learn/${enrollmentId}/lessons/${lessonId}/progress/`, payload),
-};
-
-export const paymentApi = {
-  checkout: (courseId, promoCode, idempotencyKey) =>
-    api.post(
-      "/payments/checkout/",
-      { course_id: courseId, promo_code: promoCode },
-      { headers: { "Idempotency-Key": idempotencyKey } },
-    ),
 };

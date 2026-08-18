@@ -1,25 +1,27 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Onlayn ta'lim platformasi",
-  description: "Kurslarni onlayn o'rganing va sertifikat oling",
+  title: "EduPlatform — onlayn ta'lim",
+  description: "Guruhli onlayn ta'lim platformasi",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f8fc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1016" },
+  ],
+};
+
+/**
+ * Sarlavha/navigatsiya har bir sahifada AppShell orqali render qilinadi,
+ * chunki u foydalanuvchi roliga bog'liq — root layout faqat html qobig'i.
+ */
 export default function RootLayout({ children }) {
   return (
     <html lang="uz">
-      <body>
-        <header className="site-header">
-          <a href="/" className="logo">EduPlatform</a>
-          <nav>
-            <a href="/catalog">Kurslar</a>
-            <a href="/dashboard">Kabinetim</a>
-            <a href="/teacher">O&apos;qituvchi</a>
-            <a href="/login">Kirish</a>
-          </nav>
-        </header>
-        <main>{children}</main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

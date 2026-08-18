@@ -8,13 +8,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.accounts import services
 from apps.accounts.api.serializers import (
     DeviceSerializer,
-    EmailRegisterSerializer,
     OTPRequestSerializer,
     OTPVerifySerializer,
     PasswordLoginSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RefreshRequestSerializer,
+    StudentRegisterSerializer,
     TokenResponseSerializer,
     TwoFactorConfirmSerializer,
     UserProfileSerializer,
@@ -28,20 +28,50 @@ from apps.core.exceptions import DomainError
 from apps.core.utils import get_client_ip
 
 
-class RegisterEmailView(generics.CreateAPIView):
-    """POST /api/v1/auth/register — email + parol (1.3-band ikkinchi usul)."""
+class RegisterStudentView(generics.CreateAPIView):
+    """
+    POST /api/v1/auth/register — o'quvchi ro'yxatdan o'tadi:
+    ism, familiya, username, parol va tanlangan guruh.
+
+    Hisob `pending` holatda ochiladi — mentor tasdiqlamaguncha o'quvchi
+    hech qanday kursni ko'ra olmaydi. Javobda darhol token qaytariladi,
+    shunda o'quvchi "kutilmoqda" ekranini ko'ra oladi.
+    """
 
     permission_classes = [AllowAny]
-    serializer_class = EmailRegisterSerializer
+    serializer_class = StudentRegisterSerializer
 
     def post(self, request, *args, **kwargs):
+        from apps.groups.models import Group
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        payload = serializer.validated_data
+
+        group = Group.objects.filter(id=payload["group_id"], is_active=True).first()
+        if not group:
+            return Response({"detail": "Tanlangan guruh topilmadi"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            user = services.register_with_email(**serializer.validated_data)
+            user, _join_request = services.register_student(
+                username=payload["username"],
+                password=payload["password"],
+                first_name=payload["first_name"],
+                last_name=payload["last_name"],
+                group=group,
+            )
         except DomainError as exc:
             return Response({"detail": exc.detail}, status=exc.status_code)
-        return Response(UserProfileSerializer(user).data, status=status.HTTP_201_CREATED)
+
+        tokens = services.issue_tokens(
+            user=user, device_id=None,
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        )
+        return Response(
+            {"user": UserProfileSerializer(user).data, **tokens},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class OTPSendView(APIView):
@@ -65,7 +95,10 @@ class OTPSendView(APIView):
 
 
 class OTPVerifyView(APIView):
-    """POST /api/v1/auth/otp/verify — telefon orqali kirish/ro'yxatdan o'tish (bitta oqim)."""
+    """
+    POST /api/v1/auth/otp/verify — telefon orqali MAVJUD hisobga kirish.
+    Yangi hisob bu yerda ochilmaydi (ro'yxatdan o'tish /auth/register/ orqali).
+    """
 
     permission_classes = [AllowAny]
 
@@ -73,7 +106,7 @@ class OTPVerifyView(APIView):
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            _user, tokens = services.register_or_login_with_phone(
+            user, tokens = services.login_with_phone(
                 phone=serializer.validated_data["phone"],
                 code=serializer.validated_data["code"],
                 device_id=serializer.validated_data.get("device_id"),
@@ -82,11 +115,11 @@ class OTPVerifyView(APIView):
             )
         except DomainError as exc:
             return Response({"detail": exc.detail}, status=exc.status_code)
-        return Response(TokenResponseSerializer(tokens).data)
+        return Response({"user": UserProfileSerializer(user).data, **tokens})
 
 
 class LoginView(APIView):
-    """POST /api/v1/auth/login — email/telefon + parol."""
+    """POST /api/v1/auth/login — username + parol."""
 
     permission_classes = [AllowAny]
 
@@ -94,7 +127,7 @@ class LoginView(APIView):
         serializer = PasswordLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            _user, tokens = services.login_with_password(
+            user, tokens = services.login_with_password(
                 identifier=serializer.validated_data["identifier"],
                 password=serializer.validated_data["password"],
                 device_id=serializer.validated_data.get("device_id"),
@@ -104,7 +137,8 @@ class LoginView(APIView):
             )
         except DomainError as exc:
             return Response({"detail": exc.detail}, status=exc.status_code)
-        return Response(TokenResponseSerializer(tokens).data)
+        # Rolni darhol qaytaramiz — frontend qaysi panelga yo'naltirishni biladi
+        return Response({"user": UserProfileSerializer(user).data, **tokens})
 
 
 class RefreshView(APIView):

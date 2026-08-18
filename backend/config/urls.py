@@ -16,6 +16,9 @@ urlpatterns = [
     path("api/v1/catalog/", include("apps.catalog.api.urls")),
     path("api/v1/courses/", include("apps.courses.api.urls")),
     path("api/v1/courses/", include("apps.communication.api.urls")),  # N-01: dars ostida izoh/Q&A
+    path("api/v1/groups/", include("apps.groups.api.urls")),
+    path("api/v1/manager/", include("apps.groups.api.manager_urls")),
+    path("api/v1/mentor/", include("apps.groups.api.mentor_urls")),
     path("api/v1/learn/", include("apps.enrollment.api.urls")),
     path("api/v1/assessments/", include("apps.assessments.api.urls")),
     path("api/v1/assignments/", include("apps.assignments.api.urls")),

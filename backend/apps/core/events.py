@@ -49,3 +49,7 @@ EVENT_COURSE_COMPLETED = "course_completed"
 EVENT_CERTIFICATE_ISSUED = "certificate_issued"
 EVENT_ASSIGNMENT_GRADED = "assignment_graded"
 EVENT_USER_REGISTERED = "user_registered"
+# Mentor o'quvchini guruhga qabul qildi -> enrollment app kursga yozadi
+EVENT_STUDENT_ADMITTED = "student_admitted_to_group"
+# Mentor o'quvchini boshqa guruhga ko'chirdi (kurs o'zgargan bo'lishi mumkin)
+EVENT_STUDENT_TRANSFERRED = "student_transferred_between_groups"

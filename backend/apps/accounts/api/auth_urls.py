@@ -3,7 +3,7 @@ from django.urls import path
 from apps.accounts.api import views
 
 urlpatterns = [
-    path("register/", views.RegisterEmailView.as_view(), name="auth-register"),
+    path("register/", views.RegisterStudentView.as_view(), name="auth-register"),
     path("login/", views.LoginView.as_view(), name="auth-login"),
     path("otp/send/", views.OTPSendView.as_view(), name="auth-otp-send"),
     path("otp/verify/", views.OTPVerifyView.as_view(), name="auth-otp-verify"),

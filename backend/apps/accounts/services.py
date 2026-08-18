@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -79,42 +80,84 @@ def verify_otp(*, phone: str, code: str, purpose: str) -> OTPCode:
 # Ro'yxatdan o'tish / kirish
 # ---------------------------------------------------------------------------
 
-def register_or_login_with_phone(*, phone: str, code: str, device_id: str | None = None,
-                                  ip_address: str | None = None, user_agent: str = "") -> tuple[User, dict]:
-    """1.3-band asosiy usul: OTP tasdiqlangandan keyin user topiladi yoki yaratiladi."""
+def login_with_phone(*, phone: str, code: str, device_id: str | None = None,
+                     ip_address: str | None = None, user_agent: str = "") -> tuple[User, dict]:
+    """
+    Telefon+OTP orqali MAVJUD hisobga kirish (qulaylik uchun qo'shimcha usul).
+
+    Bu yerda yangi hisob YARATILMAYDI: ro'yxatdan o'tishning yagona yo'li —
+    `register_student()`, ya'ni guruh tanlab, mentor tasdig'ini kutish. Aks
+    holda OTP orqali kimdir tasdiqsiz faol hisob ochib olishi mumkin edi.
+    """
     verify_otp(phone=phone, code=code, purpose=OTPPurpose.LOGIN)
 
-    user, created = User.objects.get_or_create(
-        phone=phone, defaults={"is_phone_verified": True},
-    )
+    user = User.objects.filter(phone=phone).first()
+    if not user:
+        raise AuthError(
+            "Bu raqam bo'yicha hisob topilmadi. Avval ro'yxatdan o'ting.",
+            code="user_not_found", status_code=404,
+        )
+
     if not user.is_phone_verified:
         user.is_phone_verified = True
         user.save(update_fields=["is_phone_verified"])
-
-    if created:
-        publish(EVENT_USER_REGISTERED, user_id=str(user.id), channel="phone")
 
     tokens = issue_tokens(user=user, device_id=device_id, ip_address=ip_address, user_agent=user_agent)
     return user, tokens
 
 
-def register_with_email(*, email: str, password: str, full_name: str = "") -> User:
-    if User.objects.filter(email__iexact=email).exists():
-        raise AuthError("Bu email allaqachon ro'yxatdan o'tgan", code="email_taken")
-    try:
-        from django.contrib.auth.password_validation import validate_password
+@transaction.atomic
+def register_student(*, username: str, password: str, first_name: str, last_name: str,
+                     group) -> tuple[User, "object"]:
+    """
+    O'quvchining ro'yxatdan o'tishi: hisob `pending` holatda ochiladi va
+    tanlangan guruhga qo'shilish so'rovi yaratiladi. Mentor tasdiqlamaguncha
+    o'quvchi hech qanday kursni ko'ra olmaydi.
 
+    Guruh (`group`) chaqiruvchi tomonidan topib beriladi — accounts app
+    groups app'iga bog'lanib qolmasligi uchun.
+    """
+    if User.objects.filter(username__iexact=username).exists():
+        raise AuthError("Bu username allaqachon band", code="username_taken")
+
+    _validate_username(username)
+    _validate_password(password)
+
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        first_name=first_name.strip(),
+        last_name=last_name.strip(),
+        full_name=f"{first_name.strip()} {last_name.strip()}".strip(),
+        status=UserStatus.PENDING,
+    )
+
+    from apps.groups.services import create_join_request
+    from apps.rbac.services import assign_role_by_codename
+
+    assign_role_by_codename(user=user, codename="student")
+    join_request = create_join_request(student=user, group=group)
+
+    publish(EVENT_USER_REGISTERED, user_id=str(user.id), channel="username")
+    return user, join_request
+
+
+def _validate_username(username: str) -> None:
+    from apps.accounts.validators import UsernameValidator
+
+    try:
+        UsernameValidator()(username)
+    except DjangoValidationError as exc:
+        raise AuthError("; ".join(exc.messages), code="invalid_username") from exc
+
+
+def _validate_password(password: str) -> None:
+    from django.contrib.auth.password_validation import validate_password
+
+    try:
         validate_password(password)
     except DjangoValidationError as exc:
         raise AuthError("; ".join(exc.messages), code="weak_password") from exc
-
-    user = User.objects.create_user(email=email, password=password, full_name=full_name)
-
-    from apps.notifications.tasks import send_email_verification
-
-    send_email_verification.delay(user_id=str(user.id))
-    publish(EVENT_USER_REGISTERED, user_id=str(user.id), channel="email")
-    return user
 
 
 def login_with_password(*, identifier: str, password: str, device_id: str | None = None,

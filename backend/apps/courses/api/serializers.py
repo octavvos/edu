@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.core.fields import I18nCharField
 from apps.courses.models import Course, FileAsset, Lesson, Module, VideoAsset
 
 
@@ -18,6 +19,8 @@ class FileAssetSerializer(serializers.ModelSerializer):
 class LessonPublicSerializer(serializers.ModelSerializer):
     """Syllabus'da ko'rsatiladi — kontent emas, faqat struktura (access nazorati enrollment'da)."""
 
+    title = I18nCharField()
+
     class Meta:
         model = Lesson
         fields = ("id", "type", "title", "order", "is_required", "is_free_preview")
@@ -26,6 +29,8 @@ class LessonPublicSerializer(serializers.ModelSerializer):
 class LessonDetailSerializer(serializers.ModelSerializer):
     video_asset = VideoAssetSerializer(read_only=True)
     file_asset = FileAssetSerializer(read_only=True)
+    title = I18nCharField()
+    text_content = I18nCharField()
 
     class Meta:
         model = Lesson
@@ -43,6 +48,7 @@ class LessonCreateSerializer(serializers.ModelSerializer):
 
 class ModuleSerializer(serializers.ModelSerializer):
     lessons = LessonPublicSerializer(many=True, read_only=True)
+    title = I18nCharField()
 
     class Meta:
         model = Module
@@ -57,7 +63,11 @@ class ModuleCreateSerializer(serializers.ModelSerializer):
 
 class CourseDetailSerializer(serializers.ModelSerializer):
     modules = ModuleSerializer(many=True, read_only=True)
-    author_name = serializers.CharField(source="author.full_name", read_only=True)
+    author_name = serializers.CharField(source="author.display_name", read_only=True)
+    title = I18nCharField()
+    description = I18nCharField()
+    requirements = I18nCharField()
+    outcomes = I18nCharField()
 
     class Meta:
         model = Course
@@ -80,6 +90,8 @@ class CourseCreateSerializer(serializers.ModelSerializer):
 
 
 class TeacherCourseListSerializer(serializers.ModelSerializer):
+    title = I18nCharField()
+
     class Meta:
         model = Course
         fields = (

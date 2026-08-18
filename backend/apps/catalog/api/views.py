@@ -1,6 +1,6 @@
 from rest_framework import status
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,12 +12,16 @@ from apps.catalog.api.serializers import (
     ReviewSerializer,
 )
 from apps.core.exceptions import DomainError
+from apps.rbac.permissions import IsApprovedStudent
+
+# Mahsulot qoidasi: katalog yopiq — faqat ro'yxatdan o'tgan va mentor
+# tasdiqlagan foydalanuvchi kurslarni ko'ra oladi.
 
 
 class CategoryListView(APIView):
     """K-01"""
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsApprovedStudent]
 
     def get(self, request):
         roots, by_parent = selectors.get_category_tree()
@@ -28,7 +32,7 @@ class CategoryListView(APIView):
 class CourseSearchView(APIView):
     """K-02, K-03, K-04: filtrlar, saralash, typo-tolerant qidiruv."""
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsApprovedStudent]
     pagination_class = LimitOffsetPagination
 
     def get(self, request):
@@ -44,7 +48,7 @@ class CourseSearchView(APIView):
         )
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(qs, request)
-        data = CourseCardSerializer(page, many=True).data
+        data = CourseCardSerializer(page, many=True, context={"request": request}).data
         return paginator.get_paginated_response(data)
 
 
@@ -57,7 +61,7 @@ def _parse_bool(value):
 class RecommendationsView(APIView):
     """K-05"""
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsApprovedStudent]
 
     def get(self, request, course_id):
         from apps.courses.models import Course
@@ -71,10 +75,7 @@ class RecommendationsView(APIView):
 class CourseReviewListCreateView(APIView):
     """K-08"""
 
-    def get_permissions(self):
-        if self.request.method == "POST":
-            return [IsAuthenticated()]
-        return [AllowAny()]
+    permission_classes = [IsAuthenticated, IsApprovedStudent]
 
     def get(self, request, course_id):
         from apps.courses.models import Course

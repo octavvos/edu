@@ -55,6 +55,7 @@ LOCAL_APPS = [
     "apps.audit",
     "apps.catalog",
     "apps.courses",
+    "apps.groups",
     "apps.enrollment",
     "apps.assessments",
     "apps.assignments",
@@ -114,21 +115,20 @@ DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 AUTH_USER_MODEL = "accounts.User"
 AUTHENTICATION_BACKENDS = [
-    "apps.accounts.backends.EmailOrPhoneBackend",
+    "apps.accounts.backends.UsernameOrContactBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
 # ---------------------------------------------------------------------------
-# Password validation — A-01: min 8, Argon2 hashing
+# Password validation — parol uchun yagona talab: kamida 4 belgi.
+# O'quvchilar uchun ro'yxatdan o'tishni soddalashtirish bo'yicha mahsulot
+# qarori; Argon2 hashing saqlanib qoladi.
 # ---------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {"min_length": 8},
+        "NAME": "apps.accounts.validators.PasswordComplexityValidator",
+        "OPTIONS": {"min_length": 4},
     },
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "apps.accounts.validators.PasswordComplexityValidator"},
 ]
 
 PASSWORD_HASHERS = [

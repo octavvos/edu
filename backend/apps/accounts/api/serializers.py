@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.accounts.models import Device, OTPPurpose, User, UserSession
+from apps.accounts.validators import PASSWORD_MIN_LENGTH, USERNAME_MIN_LENGTH
 
 
 class OTPRequestSerializer(serializers.Serializer):
@@ -14,14 +15,18 @@ class OTPVerifySerializer(serializers.Serializer):
     device_id = serializers.CharField(required=False, allow_blank=True)
 
 
-class EmailRegisterSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, min_length=8)
-    full_name = serializers.CharField(required=False, allow_blank=True, default="")
+class StudentRegisterSerializer(serializers.Serializer):
+    """O'quvchi ro'yxatdan o'tishi: ism, familiya, username, parol + guruh."""
+
+    first_name = serializers.CharField(max_length=75)
+    last_name = serializers.CharField(max_length=75)
+    username = serializers.CharField(min_length=USERNAME_MIN_LENGTH, max_length=150)
+    password = serializers.CharField(write_only=True, min_length=PASSWORD_MIN_LENGTH)
+    group_id = serializers.UUIDField()
 
 
 class PasswordLoginSerializer(serializers.Serializer):
-    identifier = serializers.CharField()  # phone yoki email
+    identifier = serializers.CharField()  # username (yoki eski hisoblar uchun telefon/email)
     password = serializers.CharField(write_only=True)
     device_id = serializers.CharField(required=False, allow_blank=True)
     otp_code = serializers.CharField(required=False, allow_blank=True)  # 2FA TOTP
@@ -37,14 +42,33 @@ class RefreshRequestSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    """
+    Frontend shu javobga qarab qaysi panelni ochishni hal qiladi:
+    `roles` ichida manager / mentor / student bo'ladi, `status` esa
+    o'quvchi hali mentor tasdig'ini kutayotganini bildiradi.
+    """
+
+    display_name = serializers.CharField(read_only=True)
+    roles = serializers.SerializerMethodField()
+    is_pending_approval = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = User
         fields = (
-            "id", "phone", "email", "is_phone_verified", "is_email_verified",
-            "full_name", "avatar", "birth_date", "gender", "city",
-            "language", "timezone", "theme", "status", "created_at",
+            "id", "username", "first_name", "last_name", "display_name",
+            "phone", "email", "avatar", "birth_date", "gender", "city",
+            "language", "timezone", "theme", "status", "is_pending_approval",
+            "roles", "created_at",
         )
-        read_only_fields = ("id", "phone", "email", "is_phone_verified", "is_email_verified", "status", "created_at")
+        read_only_fields = ("id", "username", "phone", "email", "status", "created_at")
+
+    def get_roles(self, obj) -> list[str]:
+        from apps.rbac.selectors import get_user_role_codenames
+
+        roles = get_user_role_codenames(obj)
+        if obj.is_superuser and "manager" not in roles:
+            roles = [*roles, "manager"]
+        return roles
 
 
 class UserSettingsSerializer(serializers.ModelSerializer):
@@ -73,7 +97,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
-    new_password = serializers.CharField(min_length=8)
+    new_password = serializers.CharField(min_length=PASSWORD_MIN_LENGTH)
 
 
 class TwoFactorConfirmSerializer(serializers.Serializer):
