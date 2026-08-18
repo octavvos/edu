@@ -107,7 +107,7 @@ Tizimda **3 ta rol** bor:
 | Rol | Vazifasi |
 |-----|----------|
 | **manager** | Kurs ochadi, guruh yaratadi, dars vaqtlarini belgilaydi, guruhga mentor biriktiradi |
-| **mentor** | O'z guruhlariga kelgan ro'yxatdan o'tish so'rovlarini tasdiqlaydi/rad etadi, o'quvchilarni guruhlar orasida ko'chiradi |
+| **mentor** | So'rovlarni tasdiqlaydi, o'quvchilarni guruhlar orasida ko'chiradi, uy vazifalarini tekshiradi va o'quvchilar progressini kuzatadi |
 | **o'quvchi** | Ro'yxatdan o'tib guruh tanlaydi; mentor tasdiqlagach guruh kursini ko'radi |
 
 Ro'yxatdan o'tish oqimi:
@@ -119,6 +119,32 @@ Ro'yxatdan o'tish oqimi:
 
 > Telefon+OTP orqali kirish faqat **mavjud** hisob uchun ishlaydi — u orqali
 > yangi hisob ochib bo'lmaydi, aks holda mentor tasdig'ini chetlab o'tish mumkin bo'lardi.
+
+## Mentor paneli
+
+**Uy vazifalari** (`/mentor/homework`) — topshiriq mentorga o'quvchining
+guruhi orqali biriktiriladi. Holat oqimi:
+
+```
+yuborilgan → tekshirilmoqda → qayta ishlashga qaytarildi → qabul qilindi
+```
+
+- Ball 0–100 va izoh; "qabul qilindi" holatiga **faqat baho orqali** o'tiladi,
+  shunda ballsiz tasdiqlab yuborib bo'lmaydi.
+- Kechikkan topshiriqlar navbatning tepasida va alohida belgi bilan ko'rinadi.
+- Boshqa mentorning topshirig'ini tekshirish 403 bilan rad etiladi.
+
+**O'quvchilar monitoringi** (`/mentor/students`) — progress, oxirgi kirgan
+vaqt va tekshirilmagan topshiriqlar. "Xavf ostida" mezonlari
+(`apps/groups/monitoring.py` da o'zgartiriladi):
+
+| Mezon | Chegara |
+|-------|---------|
+| Uzoq vaqt kirmagan (yoki umuman kirmagan) | ≥ 14 kun |
+| Progress past — guruhga qo'shilganiga 14 kundan oshgan bo'lsa | < 30% |
+| Kechikkan, hali qabul qilinmagan topshiriq | ≥ 1 ta |
+
+Xavf ostidagilar ro'yxat tepasida, har biri **sababi bilan** ko'rsatiladi.
 
 ## Lokal ishga tushirish (Docker'siz)
 

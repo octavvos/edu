@@ -66,10 +66,16 @@ def i18n_field(**kwargs):
     return models.JSONField(**kwargs)
 
 
-def get_i18n_value(obj, field_name: str, lang: str) -> str:
-    """i18n JSONB maydondan berilgan til uchun qiymatni oladi, bo'lmasa uz'ga fallback."""
-    value = getattr(obj, field_name, None) or {}
+def resolve_i18n(value, lang: str) -> str:
+    """i18n lug'atidan berilgan til uchun qiymatni oladi, bo'lmasa uz'ga fallback."""
+    if not isinstance(value, dict):
+        return value or ""
     return value.get(lang) or value.get(settings.LANGUAGE_CODE) or next(iter(value.values()), "")
+
+
+def get_i18n_value(obj, field_name: str, lang: str) -> str:
+    """Obyektning i18n JSONB maydonini tilga qarab ochadi."""
+    return resolve_i18n(getattr(obj, field_name, None), lang)
 
 
 class StatusChoices(models.TextChoices):

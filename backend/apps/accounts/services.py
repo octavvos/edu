@@ -234,6 +234,13 @@ def issue_tokens(*, user: User, device_id: str | None, ip_address: str | None, u
         user=user, device=device, refresh_jti=str(refresh["jti"]),
         ip_address=ip_address, user_agent=user_agent[:255],
     )
+
+    # Django `last_login`ni faqat contrib.auth.login() yangilaydi; biz JWT
+    # ishlatamiz, shuning uchun qo'lda yozamiz — mentor o'quvchi faolligini
+    # ("oxirgi kirgan vaqt") shu maydon orqali kuzatadi.
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+
     return {"access": str(refresh.access_token), "refresh": str(refresh)}
 
 

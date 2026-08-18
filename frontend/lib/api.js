@@ -114,6 +114,12 @@ export const mentorApi = {
   requests: () => api.get("/mentor/requests/"),
   approve: (id) => api.post(`/mentor/requests/${id}/approve/`),
   reject: (id, note) => api.post(`/mentor/requests/${id}/reject/`, { note }),
+  // Uy vazifalari
+  submissions: (params) => api.get("/mentor/submissions/", { params }),
+  setStatus: (id, status) => api.post(`/mentor/submissions/${id}/status/`, { status }),
+  grade: (id, payload) => api.post(`/mentor/submissions/${id}/grade/`, payload),
+  // O'quvchilar monitoringi
+  students: (params) => api.get("/mentor/students/", { params }),
   transfer: (studentId, fromGroupId, toGroupId) =>
     api.post("/mentor/transfer/", {
       student_id: studentId,

@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from apps.core.models import get_i18n_value
+from apps.core.models import resolve_i18n
 
 
 class I18nCharField(serializers.Field):
@@ -12,28 +12,27 @@ class I18nCharField(serializers.Field):
 
     Xom lug'atni yuborish klientni til tanlash logikasini takrorlashga majbur
     qiladi va React'da obyektni render qilishga urinib xatolikka olib keladi.
-    Til `request.query_params["lang"]` yoki foydalanuvchi profilidan olinadi.
+
+    DRF'ning standart `source` yo'li ishlaydi, shu jumladan ichma-ich:
+        title = I18nCharField()
+        lesson_title = I18nCharField(source="homework.lesson.title")
+
+    Til `?lang=` so'rov parametridan yoki foydalanuvchi profilidan olinadi.
     """
 
-    def __init__(self, source_field: str | None = None, **kwargs):
+    def __init__(self, **kwargs):
         kwargs.setdefault("read_only", True)
-        self._source_field = source_field
         super().__init__(**kwargs)
 
-    def get_attribute(self, instance):
-        # Butun obyektni olamiz — qiymatni to_representation'da tilga qarab ochamiz
-        return instance
-
-    def to_representation(self, instance) -> str:
-        field_name = self._source_field or self.field_name
-        return get_i18n_value(instance, field_name, self._language())
+    def to_representation(self, value) -> str:
+        # `value` — i18n lug'ati (DRF source bo'yicha olib bergan)
+        return resolve_i18n(value, self._language())
 
     def _language(self) -> str:
         request = self.context.get("request")
         if not request:
             return "uz"
-        lang = request.query_params.get("lang") if hasattr(request, "query_params") else None
+        lang = getattr(request, "query_params", {}).get("lang") if request else None
         if lang:
             return lang
-        user = getattr(request, "user", None)
-        return getattr(user, "language", None) or "uz"
+        return getattr(getattr(request, "user", None), "language", None) or "uz"
