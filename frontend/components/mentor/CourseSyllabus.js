@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  Check, ChevronDown, ChevronRight, FileText, HelpCircle, Plus, Upload, X,
+  Check, ChevronDown, ChevronRight, FileText, HelpCircle, Plus, X,
 } from "../Icons";
 import { errorMessage, mentorApi } from "../../lib/api";
-import { MATERIAL_ACCEPT, validateMaterialFile } from "../../lib/materials";
+import MaterialUploadModal from "./MaterialUploadModal";
 
 const LESSON_TYPES = [
   { value: "text", label: "Matnli dars" },
@@ -178,28 +178,7 @@ function LessonCreateForm({ moduleId, onCreated, onError }) {
 function LessonRow({ lesson, onChanged, onError }) {
   const [quizOpen, setQuizOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [creatingQuiz, setCreatingQuiz] = useState(false);
-
-  async function handleFileChange(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const problem = validateMaterialFile(file);
-    if (problem) {
-      onError({ type: "danger", text: problem });
-      return;
-    }
-    setUploading(true);
-    try {
-      await mentorApi.uploadMaterial(lesson.id, file);
-      onChanged();
-    } catch (err) {
-      onError({ type: "danger", text: errorMessage(err, "Fayl yuklashda xatolik") });
-    } finally {
-      setUploading(false);
-    }
-  }
 
   async function handleCreateQuiz() {
     setCreatingQuiz(true);
@@ -240,17 +219,11 @@ function LessonRow({ lesson, onChanged, onError }) {
               </button>
             )
           ) : (
-            <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }}>
-              {uploading ? <span className="spinner" /> : <Upload width={14} height={14} />}
-              {lesson.materials?.length > 0 ? "Yana fayl qo'shish" : "Material yuklash"}
-              <input
-                type="file"
-                accept={MATERIAL_ACCEPT}
-                onChange={handleFileChange}
-                style={{ display: "none" }}
-                disabled={uploading}
-              />
-            </label>
+            <MaterialUploadModal
+              lessonId={lesson.id}
+              label={lesson.materials?.length > 0 ? "Yana fayl qo'shish" : "Material yuklash"}
+              onUploaded={onChanged}
+            />
           )}
         </div>
       </div>
@@ -271,7 +244,7 @@ function LessonRow({ lesson, onChanged, onError }) {
               style={{ gap: 6, color: "var(--text-secondary)" }}
             >
               <FileText width={14} height={14} />
-              {material.original_filename}
+              {material.title || material.original_filename}
               <span className="dim">({formatSize(material.size_bytes)})</span>
             </a>
           ))}

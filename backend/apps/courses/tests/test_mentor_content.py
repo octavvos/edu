@@ -115,7 +115,7 @@ def test_material_upload_accepts_allowed_extension():
     from apps.courses.api.mentor_serializers import MaterialUploadSerializer
 
     upload = SimpleUploadedFile("dars.pdf", b"%PDF-1.4", content_type="application/pdf")
-    serializer = MaterialUploadSerializer(data={"file": upload})
+    serializer = MaterialUploadSerializer(data={"file": upload, "title": "Dars slaydlari"})
 
     assert serializer.is_valid(), serializer.errors
 

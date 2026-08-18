@@ -151,7 +151,7 @@ material yuklaydi va test ochadi (`content.manage` huquqi):
 
 - `POST /mentor/courses/{course_id}/modules/` — modul qo'shish
 - `POST /mentor/modules/{module_id}/lessons/` — dars qo'shish (video/matn/fayl/test/uy vazifasi)
-- `POST /mentor/lessons/{lesson_id}/material/` — fayl material yuklash (multipart, haqiqiy MinIO/S3'ga saqlanadi)
+- `POST /mentor/lessons/{lesson_id}/material/` — fayl material yuklash (multipart: `file`, `title` — majburiy, `description` — ixtiyoriy; haqiqiy MinIO/S3'ga saqlanadi)
 - `DELETE /mentor/materials/{material_id}/` — materialni o'chirish
 - `POST /mentor/lessons/{lesson_id}/quiz/` — darsga test ochish
 - `POST /mentor/quizzes/{quiz_id}/questions/` — savol qo'shish (4 turi: bitta/ko'p tanlovli, to'g'ri/noto'g'ri, qisqa matn)
@@ -197,6 +197,11 @@ Alohida **Materiallar** sahifasi (`/mentor/materials`) — ikki ustunli
 layout: chapda barcha dars rejalar ixcham ro'yxatda (modul akkordion,
 yuklangan darsda ✓ belgisi), o'ngda tanlangan darsning materiallari doim
 ko'rinadigan panelda (drag-and-drop, ro'yxat, har biriga o'chirish tugmasi).
+"Fayl tanlash" tugmasi darhol fayl dialogini ochmaydi — avval modal oynada
+material nomi (taqdimot/vazifa nomi, majburiy) va izoh (ixtiyoriy)
+so'raladi, so'ng fayl tanlanadi va shu ma'lumotlar bilan birga yuklanadi
+(`components/mentor/MaterialUploadModal.js`, kurs sillabusidagi inline
+yuklashda ham qayta ishlatiladi).
 
 ## Lokal ishga tushirish (Docker'siz)
 

@@ -188,6 +188,8 @@ class FileAsset(BaseModel):
     lesson = models.ForeignKey(
         Lesson, on_delete=models.CASCADE, null=True, blank=True, related_name="materials",
     )
+    title = models.CharField(max_length=255, blank=True)
+    description = models.TextField(blank=True)
     file = models.FileField(upload_to="courses/files/")
     original_filename = models.CharField(max_length=255)
     mime_type = models.CharField(max_length=100, blank=True)

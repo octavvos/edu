@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../../components/AppShell";
-import { Book, Check, ChevronDown, ChevronRight, FileText, Upload, X } from "../../../components/Icons";
+import { Book, Check, ChevronDown, ChevronRight, FileText, X } from "../../../components/Icons";
+import MaterialUploadModal from "../../../components/mentor/MaterialUploadModal";
 import { errorMessage, mentorApi } from "../../../lib/api";
-import { MATERIAL_ACCEPT, MAX_MATERIAL_SIZE_MB, validateMaterialFile } from "../../../lib/materials";
+import { MAX_MATERIAL_SIZE_MB } from "../../../lib/materials";
 import { useAuth } from "../../../lib/auth";
 
 const LESSON_TYPE_LABEL = {
@@ -209,31 +210,11 @@ function ModuleList({ module, selectedId, onSelect }) {
 // ---------------------------------------------------------------------------
 
 function MaterialPanel({ lesson, onChanged, onError }) {
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const materials = lesson.materials || [];
 
-  async function upload(file) {
-    if (!file) return;
-    const problem = validateMaterialFile(file);
-    if (problem) {
-      onError({ type: "danger", text: problem });
-      return;
-    }
-    setUploading(true);
-    try {
-      await mentorApi.uploadMaterial(lesson.id, file);
-      onChanged();
-    } catch (err) {
-      onError({ type: "danger", text: errorMessage(err, "Fayl yuklashda xatolik") });
-    } finally {
-      setUploading(false);
-    }
-  }
-
   async function handleDelete(material) {
-    if (!window.confirm(`"${material.original_filename}" o'chirilsinmi?`)) return;
+    if (!window.confirm(`"${material.title || material.original_filename}" o'chirilsinmi?`)) return;
     setDeletingId(material.id);
     try {
       await mentorApi.deleteMaterial(material.id);
@@ -243,12 +224,6 @@ function MaterialPanel({ lesson, onChanged, onError }) {
     } finally {
       setDeletingId(null);
     }
-  }
-
-  function handleDrop(e) {
-    e.preventDefault();
-    setDragOver(false);
-    upload(e.dataTransfer.files?.[0]);
   }
 
   return (
@@ -277,8 +252,15 @@ function MaterialPanel({ lesson, onChanged, onError }) {
                 style={{ gap: 7, color: "var(--text)", minWidth: 0 }}
               >
                 <FileText width={15} height={15} style={{ flexShrink: 0 }} />
-                <span className="strong" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {material.original_filename}
+                <span style={{ minWidth: 0, overflow: "hidden" }}>
+                  <span className="strong" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {material.title || material.original_filename}
+                  </span>
+                  {material.description && (
+                    <span className="dim" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {material.description}
+                    </span>
+                  )}
                 </span>
                 <span className="dim" style={{ flexShrink: 0 }}>({formatSize(material.size_bytes)})</span>
               </a>
@@ -295,34 +277,12 @@ function MaterialPanel({ lesson, onChanged, onError }) {
         </div>
       )}
 
-      <div
-        className="mt-3"
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        style={{
-          border: `1.5px dashed ${dragOver ? "var(--primary)" : "var(--border-strong)"}`,
-          borderRadius: "var(--radius)",
-          padding: 20,
-          textAlign: "center",
-          background: dragOver ? "var(--primary-soft)" : "var(--bg-subtle)",
-          transition: "border-color 0.15s, background 0.15s",
-        }}
-      >
-        <Upload width={20} height={20} className="dim" style={{ marginBottom: 6 }} />
-        <p className="small muted">Faylni shu yerga tashlang yoki tanlang</p>
-
-        <label className="btn btn-sm mt-3" style={{ cursor: "pointer" }}>
-          {uploading ? <span className="spinner" /> : <Upload width={14} height={14} />}
-          {materials.length > 0 ? "Yana fayl qo'shish" : "Fayl tanlash"}
-          <input
-            type="file"
-            accept={MATERIAL_ACCEPT}
-            onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ""; }}
-            style={{ display: "none" }}
-            disabled={uploading}
-          />
-        </label>
+      <div className="mt-3">
+        <MaterialUploadModal
+          lessonId={lesson.id}
+          label={materials.length > 0 ? "Yana fayl qo'shish" : "Fayl tanlash"}
+          onUploaded={onChanged}
+        />
       </div>
 
       <div className="alert alert-info mt-3" style={{ marginBottom: 0 }}>

@@ -124,9 +124,11 @@ export const mentorApi = {
   courses: () => api.get("/mentor/courses/"),
   createModule: (courseId, title) => api.post(`/mentor/courses/${courseId}/modules/`, { title }),
   createLesson: (moduleId, payload) => api.post(`/mentor/modules/${moduleId}/lessons/`, payload),
-  uploadMaterial: (lessonId, file, isDownloadable = true) => {
+  uploadMaterial: (lessonId, file, { title, description = "", isDownloadable = true } = {}) => {
     const form = new FormData();
     form.append("file", file);
+    form.append("title", title);
+    form.append("description", description);
     form.append("is_downloadable", isDownloadable);
     return api.post(`/mentor/lessons/${lessonId}/material/`, form, {
       headers: { "Content-Type": "multipart/form-data" },

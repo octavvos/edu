@@ -57,7 +57,9 @@ def reorder_lessons(*, module: Module, ordered_ids: list[str]) -> None:
         Lesson.objects.filter(module=module, id=lesson_id).update(order=index)
 
 
-def add_file_material(*, lesson: Lesson, file, is_downloadable: bool = True) -> FileAsset:
+def add_file_material(
+    *, lesson: Lesson, file, is_downloadable: bool = True, title: str = "", description: str = "",
+) -> FileAsset:
     """
     Material yuklash — hujjat/slayd/qo'shimcha fayl. Haqiqiy S3/MinIO
     backend orqali saqlanadi (STORAGES["default"]), video kabi tashqi
@@ -69,6 +71,8 @@ def add_file_material(*, lesson: Lesson, file, is_downloadable: bool = True) -> 
     return FileAsset.objects.create(
         lesson=lesson,
         file=file,
+        title=title,
+        description=description,
         original_filename=getattr(file, "name", "") or "",
         mime_type=getattr(file, "content_type", "") or "",
         size_bytes=getattr(file, "size", 0) or 0,

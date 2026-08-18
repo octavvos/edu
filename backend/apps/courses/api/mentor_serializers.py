@@ -58,6 +58,8 @@ class LessonWriteSerializer(serializers.Serializer):
 
 class MaterialUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
+    title = serializers.CharField(max_length=255)
+    description = serializers.CharField(required=False, allow_blank=True, default="")
     is_downloadable = serializers.BooleanField(default=True)
 
     def validate_file(self, value):
