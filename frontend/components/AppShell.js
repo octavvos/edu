@@ -20,10 +20,10 @@ export default function AppShell({ user, children, narrow = false }) {
   if (hasRole(user, "manager")) links.push({ href: "/manager", label: "Guruhlar" });
   if (hasRole(user, "mentor")) {
     links.push({ href: "/mentor", label: "So'rovlar" });
+    links.push({ href: "/mentor/courses", label: "Kurslar" });
     links.push({ href: "/mentor/homework", label: "Uy vazifalari" });
     links.push({ href: "/mentor/students", label: "O'quvchilar" });
     links.push({ href: "/mentor/groups", label: "Guruhlarim" });
-    links.push({ href: "/mentor/content", label: "Kontent" });
   }
   if (!hasRole(user, "manager") && !hasRole(user, "mentor")) {
     links.push({ href: "/dashboard", label: "Kabinetim" });

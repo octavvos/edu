@@ -9,6 +9,7 @@ from apps.courses.models import Course, Lesson, LessonType, Module
 
 class MentorLessonSerializer(serializers.ModelSerializer):
     title = I18nCharField()
+    text_content = I18nCharField()
     file_asset = FileAssetSerializer(read_only=True)
     video_asset = VideoAssetSerializer(read_only=True)
     quiz_id = serializers.SerializerMethodField()
@@ -16,8 +17,8 @@ class MentorLessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = (
-            "id", "type", "title", "order", "is_required", "is_free_preview",
-            "file_asset", "video_asset", "quiz_id",
+            "id", "type", "title", "text_content", "order", "is_required",
+            "is_free_preview", "file_asset", "video_asset", "quiz_id",
         )
 
     def get_quiz_id(self, obj) -> str | None:

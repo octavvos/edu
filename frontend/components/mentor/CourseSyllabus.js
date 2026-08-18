@@ -1,12 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import AppShell from "../../../components/AppShell";
 import {
-  Book, Check, ChevronDown, ChevronRight, FileText, HelpCircle, Plus, Upload, X,
-} from "../../../components/Icons";
-import { errorMessage, mentorApi } from "../../../lib/api";
-import { useAuth } from "../../../lib/auth";
+  Check, ChevronDown, ChevronRight, FileText, HelpCircle, Plus, Upload, X,
+} from "../Icons";
+import { errorMessage, mentorApi } from "../../lib/api";
 
 const LESSON_TYPES = [
   { value: "text", label: "Matnli dars" },
@@ -23,63 +21,8 @@ const QUESTION_TYPES = [
   { value: "short_text", label: "Qisqa matnli javob" },
 ];
 
-export default function MentorContentPage() {
-  const { user, loading } = useAuth({ roles: ["mentor"] });
-  const [courses, setCourses] = useState([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [message, setMessage] = useState(null);
-
-  const load = useCallback(() => {
-    return mentorApi
-      .courses()
-      .then(({ data }) => setCourses(data))
-      .catch((err) => setMessage({ type: "danger", text: errorMessage(err) }))
-      .finally(() => setDataLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (!loading) load();
-  }, [loading, load]);
-
-  if (loading) {
-    return <div className="app-shell"><main><div className="skeleton" style={{ height: 200 }} /></main></div>;
-  }
-
-  return (
-    <AppShell user={user}>
-      <div className="page-head">
-        <div>
-          <h1>Kontent</h1>
-          <p>Modul va darslar qo&apos;shing, material yuklang, test oching</p>
-        </div>
-      </div>
-
-      {message && <div className={`alert alert-${message.type}`}>{message.text}</div>}
-
-      {dataLoading ? (
-        <div className="skeleton" style={{ height: 220 }} />
-      ) : courses.length === 0 ? (
-        <div className="card">
-          <div className="empty">
-            <div className="empty-icon"><Book /></div>
-            <h3>Sizga kurs biriktirilmagan</h3>
-            <p>Manager sizni biror guruhga mentor qilib tayinlashi kerak.</p>
-          </div>
-        </div>
-      ) : (
-        <div className="stack">
-          {courses.map((course) => (
-            <CourseBlock key={course.id} course={course} onChanged={load} onError={setMessage} />
-          ))}
-        </div>
-      )}
-    </AppShell>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-function CourseBlock({ course, onChanged, onError }) {
+/** Bitta kursning to'liq dars rejasi: modul/dars qo'shish, material, test. */
+export default function CourseSyllabus({ course, onChanged, onError }) {
   const [addingModule, setAddingModule] = useState(false);
 
   return (
@@ -150,7 +93,7 @@ function ModuleCreateForm({ courseId, onCreated, onError }) {
 // ---------------------------------------------------------------------------
 
 function ModuleBlock({ module, onChanged, onError }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [addingLesson, setAddingLesson] = useState(false);
 
   return (
@@ -233,6 +176,7 @@ function LessonCreateForm({ moduleId, onCreated, onError }) {
 
 function LessonRow({ lesson, onChanged, onError }) {
   const [quizOpen, setQuizOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [creatingQuiz, setCreatingQuiz] = useState(false);
 
@@ -267,10 +211,14 @@ function LessonRow({ lesson, onChanged, onError }) {
   return (
     <div className="card" style={{ padding: "11px 14px" }}>
       <div className="row-between">
-        <div className="row" style={{ gap: 9 }}>
+        <button
+          className="row"
+          style={{ background: "none", border: "none", cursor: "pointer", gap: 9, padding: 0, textAlign: "left" }}
+          onClick={() => setDetailsOpen((v) => !v)}
+        >
           <span className="badge badge-neutral">{typeLabel(lesson.type)}</span>
           <span className="strong small">{lesson.title}</span>
-        </div>
+        </button>
 
         <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
           {lesson.type === "quiz" ? (
@@ -294,6 +242,10 @@ function LessonRow({ lesson, onChanged, onError }) {
           )}
         </div>
       </div>
+
+      {detailsOpen && lesson.text_content && (
+        <p className="small muted mt-2 fade-in">{lesson.text_content}</p>
+      )}
 
       {lesson.file_asset && (
         <a
@@ -547,7 +499,6 @@ function QuestionForm({ initial, onSubmit, onCancel }) {
   function updateChoice(i, key, value) {
     setChoices((prev) => prev.map((c, idx) => {
       if (idx !== i) {
-        // single_choice: faqat bitta to'g'ri javob bo'lishi mumkin
         return key === "is_correct" && value && type === "single_choice"
           ? { ...c, is_correct: false }
           : c;

@@ -164,6 +164,25 @@ kontentiga urinish 403 bilan rad etiladi.
 > `BUNNY_STREAM_*` kalitlari `.env`ga qo'shilmaguncha ishlamaydi. Fayl
 > (hujjat/slayd) materiallar esa MinIO orqali to'liq ishlaydi.
 
+### Kurslar bo'limi va dars rejasi
+
+Mentor panelida **Kurslar** (`/mentor/courses`) — mentor biriktirilgan
+kurslar ro'yxati (bo'lim/dars/soat sonlari bilan). Har biriga bosilganda
+`/mentor/courses/{id}` ochiladi — to'liq dars rejasi (syllabus), shu yerdan
+material yuklanadi va test ochiladi.
+
+"Dasturlash" kursining haqiqiy dars rejasi (Scratch → Python → PostgreSQL →
+Django/DRF/Telegram Bot → Deployment, jami 96 dars / 192 soat) quyidagi
+buyruq bilan o'rnatiladi:
+
+```bash
+docker compose exec backend python manage.py seed_curriculum
+```
+
+Ma'lumot manbai: `apps/courses/management/commands/seed_curriculum.py`
+(idempotent — mavzu nomi yoki tavsifini o'zgartirib qayta ishga tushirish
+xavfsiz). Boshqa kurs uchun `--slug` bayrog'i bilan chaqiriladi.
+
 ## Lokal ishga tushirish (Docker'siz)
 
 ### Backend
