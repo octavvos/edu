@@ -204,7 +204,10 @@ tugma orqali tanlanadi, majburiy) va izoh (ixtiyoriy) so'raladi, so'ng fayl
 tanlanadi va shu ma'lumotlar bilan birga yuklanadi
 (`components/mentor/MaterialUploadModal.js`, kurs sillabusidagi inline
 yuklashda ham qayta ishlatiladi). Material ro'yxatida turi chip sifatida
-ko'rsatiladi.
+ko'rsatiladi. Materialga bosilganda yangi brauzer tabi ochilmaydi —
+sahifaning o'zida o'rtachadan kattaroq preview oynasida ochiladi (PDF/rasm
+ichida ko'rinadi, boshqa turlar uchun "Yangi oynada ochish" tugmasi bor;
+`components/mentor/MaterialLink.js`).
 
 ## Lokal ishga tushirish (Docker'siz)
 
