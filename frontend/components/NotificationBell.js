@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell } from "./Icons";
 import { useNotifications } from "./NotificationProvider";
 
+/** Bildirishnoma turi bo'yicha bosilganda qayerga o'tilishi. */
+const EVENT_ROUTES = {
+  homework_assigned: "/assignments",
+};
+
 /** Sarlavhadagi qo'ng'iroqcha — bosilganda tarix pastga ketma-ket ochiladi. */
 export default function NotificationBell() {
-  const { items, unreadCount, markAllRead } = useNotifications();
+  const { items, unreadCount, markAllRead, markItemRead } = useNotifications();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -24,6 +31,15 @@ export default function NotificationBell() {
       if (!v) markAllRead();
       return !v;
     });
+  }
+
+  function handleItemClick(item) {
+    markItemRead(item.id);
+    const route = EVENT_ROUTES[item.event];
+    if (route) {
+      setOpen(false);
+      router.push(route);
+    }
   }
 
   return (
@@ -49,13 +65,21 @@ export default function NotificationBell() {
           ) : (
             <div className="notif-list">
               {items.map((item) => (
-                <div key={item.id} className="notif-item">
-                  <span className={`notif-dot notif-dot-${item.type}`} />
+                <button
+                  key={item.id}
+                  type="button"
+                  className="notif-item"
+                  onClick={() => handleItemClick(item)}
+                >
+                  <span
+                    className={`notif-dot notif-dot-${item.type}`}
+                    style={{ visibility: item.read ? "hidden" : "visible" }}
+                  />
                   <div className="notif-item-body">
                     <p>{item.text}</p>
                     <span className="notif-item-time">{formatRelativeTime(item.createdAt)}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

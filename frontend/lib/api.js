@@ -199,4 +199,9 @@ export const catalogApi = {
 
 export const meApi = {
   courses: () => api.get("/me/courses/"),
+  updateSettings: (payload) => api.patch("/me/settings/", payload),
+};
+
+export const notificationsApi = {
+  mine: (since) => api.get("/notifications/mine/", { params: since ? { since } : {} }),
 };
