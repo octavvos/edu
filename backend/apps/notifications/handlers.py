@@ -38,6 +38,17 @@ def _on_assignment_graded(user_id: str, submission_id: str, **kwargs):
     )
 
 
+@events.on(events.EVENT_HOMEWORK_ASSIGNED)
+def _on_homework_assigned(user_id: str, lesson_title: str, homework_id: str, **kwargs):
+    from apps.notifications.models import NotificationEvent
+    from apps.notifications.tasks import dispatch_notification
+
+    dispatch_notification.delay(
+        user_id=user_id, event=NotificationEvent.HOMEWORK_ASSIGNED,
+        context={"text": f"Sizga yangi vazifa yuborildi: {lesson_title}", "homework_id": homework_id},
+    )
+
+
 @events.on(events.EVENT_LESSON_COMPLETED)
 def _maybe_notify_next_lesson(user_id: str, enrollment_id: str, lesson_id: str, **kwargs):
     """Drip-content ochilganda N-04 'yangi dars ochildi' bildirishnomasi shu yerdan kelib chiqadi."""

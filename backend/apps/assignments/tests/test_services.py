@@ -373,6 +373,49 @@ def test_send_homework_with_both_task_material_and_presentation():
     assert homework.presentation_id == presentation.id
 
 
+def test_send_homework_notifies_active_group_students(monkeypatch):
+    """Vazifa jo'natilganda guruhning har bir faol o'quvchisiga in-app bildirishnoma tayyorlanadi."""
+    from unittest.mock import Mock
+
+    from apps.notifications.models import NotificationEvent
+
+    delay_mock = Mock()
+    monkeypatch.setattr("apps.notifications.tasks.dispatch_notification.delay", delay_mock)
+
+    mentor = UserFactory()
+    student_a, group = _student_in_group_of(mentor)
+    student_b = PendingUserFactory()
+    group_services.approve_join_request(
+        request_obj=group_services.create_join_request(student=student_b, group=group), mentor=mentor,
+    )
+    lesson = LessonFactory(module__course=group.course)
+
+    services.send_homework(mentor=mentor, lesson=lesson, group=group, instructions={"uz": "Bajaring"})
+
+    assert delay_mock.call_count == 2
+    notified_user_ids = {call.kwargs["user_id"] for call in delay_mock.call_args_list}
+    assert notified_user_ids == {str(student_a.id), str(student_b.id)}
+    for call in delay_mock.call_args_list:
+        assert call.kwargs["event"] == NotificationEvent.HOMEWORK_ASSIGNED
+        assert lesson.title["uz"] in call.kwargs["context"]["text"]
+
+
+def test_send_homework_does_not_notify_removed_student(monkeypatch):
+    from unittest.mock import Mock
+
+    delay_mock = Mock()
+    monkeypatch.setattr("apps.notifications.tasks.dispatch_notification.delay", delay_mock)
+
+    mentor = UserFactory()
+    student, group = _student_in_group_of(mentor)
+    group.memberships.filter(student=student).update(status="removed")
+    lesson = LessonFactory(module__course=group.course)
+
+    services.send_homework(mentor=mentor, lesson=lesson, group=group, instructions={"uz": "Bajaring"})
+
+    delay_mock.assert_not_called()
+
+
 def test_send_homework_rejects_presentation_from_another_lesson():
     mentor = UserFactory()
     _, group = _student_in_group_of(mentor)

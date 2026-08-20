@@ -53,3 +53,5 @@ EVENT_USER_REGISTERED = "user_registered"
 EVENT_STUDENT_ADMITTED = "student_admitted_to_group"
 # Mentor o'quvchini boshqa guruhga ko'chirdi (kurs o'zgargan bo'lishi mumkin)
 EVENT_STUDENT_TRANSFERRED = "student_transferred_between_groups"
+# Mentor guruhga vazifa jo'natdi -> guruh a'zolariga bildirishnoma
+EVENT_HOMEWORK_ASSIGNED = "homework_assigned"

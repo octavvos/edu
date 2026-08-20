@@ -2,8 +2,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.assignments.models import Grade, Homework, Submission, SubmissionStatus
-from apps.core.events import EVENT_ASSIGNMENT_GRADED, publish
+from apps.core.events import EVENT_ASSIGNMENT_GRADED, EVENT_HOMEWORK_ASSIGNED, publish
 from apps.core.exceptions import DomainError
+from apps.core.models import resolve_i18n
 
 
 class AssignmentError(DomainError):
@@ -71,6 +72,17 @@ def send_homework(*, mentor, lesson, group, instructions: dict, deadline_at=None
             "max_score": max_score, "material": material, "presentation": presentation,
         },
     )
+
+    from apps.groups.models import MembershipStatus
+
+    lesson_title = resolve_i18n(lesson.title, "uz")
+    student_ids = group.memberships.filter(status=MembershipStatus.ACTIVE).values_list("student_id", flat=True)
+    for student_id in student_ids:
+        publish(
+            EVENT_HOMEWORK_ASSIGNED,
+            user_id=str(student_id), lesson_title=lesson_title, homework_id=str(homework.id),
+        )
+
     return homework
 
 
