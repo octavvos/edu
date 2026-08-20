@@ -1,4 +1,48 @@
-from apps.assessments.models import Attempt, AttemptStatus
+from apps.assessments.models import Attempt, AttemptStatus, Quiz
+from apps.core.models import resolve_i18n
+
+
+def get_my_quizzes(user, lang: str = "uz") -> list[dict]:
+    """O'quvchining faol enrollment'lari bo'yicha mavjud barcha testlar (Testlarim)."""
+    from apps.courses.models import LessonType
+    from apps.enrollment.models import Enrollment, EnrollmentStatus
+
+    course_ids = Enrollment.objects.filter(
+        user=user, status=EnrollmentStatus.ACTIVE,
+    ).values_list("course_id", flat=True)
+
+    quizzes = (
+        Quiz.objects.filter(lesson__type=LessonType.QUIZ, lesson__module__course_id__in=list(course_ids))
+        .select_related("lesson__module__course")
+        .prefetch_related("questions")
+        .order_by("lesson__module__course_id", "lesson__module__order", "lesson__order")
+    )
+
+    results = []
+    for quiz in quizzes:
+        lesson = quiz.lesson
+        attempts = list(Attempt.objects.filter(user=user, quiz=quiz).order_by("-started_at"))
+        submitted = [a for a in attempts if a.status == AttemptStatus.SUBMITTED]
+        best_score = max((a.score_percent for a in submitted if a.score_percent is not None), default=None)
+        passed = any(a.passed for a in submitted)
+        in_progress = next((a for a in attempts if a.status == AttemptStatus.IN_PROGRESS), None)
+
+        results.append({
+            "lesson_id": str(lesson.id),
+            "title": resolve_i18n(lesson.title, lang),
+            "module_title": resolve_i18n(lesson.module.title, lang),
+            "course_title": resolve_i18n(lesson.module.course.title, lang),
+            "question_count": quiz.questions.count(),
+            "time_limit_seconds": quiz.time_limit_seconds,
+            "max_attempts": quiz.max_attempts,
+            "pass_percent": quiz.pass_percent,
+            "attempt_count": len(attempts),
+            "best_score": best_score,
+            "passed": passed,
+            "has_in_progress": in_progress is not None,
+            "in_progress_attempt_id": str(in_progress.id) if in_progress else None,
+        })
+    return results
 
 
 def get_best_attempt_score(*, enrollment, quiz_lesson_id) -> float | None:

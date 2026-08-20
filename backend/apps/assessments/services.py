@@ -137,11 +137,12 @@ def submit_answer(*, attempt: Attempt, question, selected_choice_ids: list | Non
         finalize_attempt(attempt=attempt)  # T-03: taymer tugaganda avtomatik yuborish
         raise AssessmentError("Vaqt tugadi", code="time_expired")
 
-    is_correct, points = _grade_answer(question, selected_choice_ids or [], text_answer)
+    selected_choice_ids = [str(c) for c in (selected_choice_ids or [])]
+    is_correct, points = _grade_answer(question, selected_choice_ids, text_answer)
     answer, _ = Answer.objects.update_or_create(
         attempt=attempt, question=question,
         defaults={
-            "selected_choice_ids": selected_choice_ids or [], "text_answer": text_answer,
+            "selected_choice_ids": selected_choice_ids, "text_answer": text_answer,
             "is_correct": is_correct, "points_awarded": points,
         },
     )
@@ -172,9 +173,12 @@ def finalize_attempt(*, attempt: Attempt) -> Attempt:
     if attempt.status != AttemptStatus.IN_PROGRESS:
         return attempt
 
-    answers = attempt.answers.select_related("question")
-    total_points = sum(a.question.points for a in Answer.objects.filter(attempt=attempt).select_related("question"))
-    earned_points = sum(a.points_awarded for a in answers)
+    # Ball barcha urinishga tegishli savollar bo'yicha hisoblanadi — javob berilmagan
+    # savol "0 ball" sifatida hisobga olinadi, aks holda faqat javob berilganlarni
+    # maxrajga qo'yish o'quvchiga bir nechta savolni javobsiz qoldirib ham 100%
+    # olish imkonini bergan bo'lardi.
+    total_points = sum(Question.objects.filter(id__in=attempt.question_ids).values_list("points", flat=True))
+    earned_points = sum(attempt.answers.values_list("points_awarded", flat=True))
     score_percent = round((earned_points / total_points) * 100, 2) if total_points else 0
 
     attempt.status = AttemptStatus.SUBMITTED

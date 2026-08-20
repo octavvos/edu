@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.assessments import services
+from apps.assessments import selectors, services
 from apps.assessments.api.serializers import (
     AnswerSubmitSerializer,
     AttemptSerializer,
@@ -10,6 +10,13 @@ from apps.assessments.api.serializers import (
 )
 from apps.assessments.models import Attempt, Question, Quiz
 from apps.core.exceptions import DomainError
+
+
+class MyQuizzesView(APIView):
+    """GET /api/v1/assessments/mine/ — o'quvchining barcha mavjud testlari (Testlarim)."""
+
+    def get(self, request):
+        return Response(selectors.get_my_quizzes(request.user))
 
 
 class QuizStartView(APIView):
