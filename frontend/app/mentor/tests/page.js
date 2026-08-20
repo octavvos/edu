@@ -66,6 +66,50 @@ export default function MentorTestsPage() {
     0,
   );
 
+  // Modul sarlavhasidagi statistika filtrlangan (qidiruvdan o'tgan) ro'yxatga
+  // asoslanadi, sahifalash esa faqat qaysi kartalar ko'rsatilishini belgilaydi
+  const moduleStatsById = useMemo(() => {
+    const map = new Map();
+    for (const { modules } of filteredGroups) {
+      for (const { module, lessons } of modules) {
+        const missing = lessons.filter((l) => !l.quiz_id).length;
+        map.set(module.id, { total: lessons.length, opened: lessons.length - missing, missing });
+      }
+    }
+    return map;
+  }, [filteredGroups]);
+
+  // Butun sahifada faqat bitta pagination bo'lishi uchun testlar tekis
+  // ro'yxatga yig'iladi, sahifalanadi, so'ng joriy sahifadagilar qayta
+  // kurs/modul bo'yicha (tartibni buzmasdan) guruhlanadi
+  const flatLessons = useMemo(() => {
+    const items = [];
+    for (const { course, modules } of filteredGroups) {
+      for (const { module, lessons } of modules) {
+        for (const lesson of lessons) items.push({ course, module, lesson });
+      }
+    }
+    return items;
+  }, [filteredGroups]);
+
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [q]);
+
+  const totalPages = Math.max(1, Math.ceil(flatLessons.length / TESTS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pageGroups = useMemo(() => {
+    const pageItems = flatLessons.slice((currentPage - 1) * TESTS_PER_PAGE, currentPage * TESTS_PER_PAGE);
+    const groups = [];
+    for (const { course, module, lesson } of pageItems) {
+      let courseEntry = groups.find((g) => g.course.id === course.id);
+      if (!courseEntry) { courseEntry = { course, modules: [] }; groups.push(courseEntry); }
+      let moduleEntry = courseEntry.modules.find((m) => m.module.id === module.id);
+      if (!moduleEntry) { moduleEntry = { module, lessons: [] }; courseEntry.modules.push(moduleEntry); }
+      moduleEntry.lessons.push(lesson);
+    }
+    return groups;
+  }, [flatLessons, currentPage]);
+
   // Modal ochiq bo'lsa ham, orqa fonda ma'lumot yangilansa (masalan guruhga yuborilganda)
   // eng so'nggi lesson holatini ko'rsatish uchun
   const allLessons = useMemo(() => courses.flatMap((c) => c.modules).flatMap((m) => m.lessons), [courses]);
@@ -138,25 +182,37 @@ export default function MentorTestsPage() {
       ) : filteredGroups.length === 0 ? (
         <p className="small dim mt-3">&quot;{query}&quot; bo&apos;yicha hech narsa topilmadi.</p>
       ) : (
-        <div className="stack mt-3" style={{ gap: 26 }}>
-          {filteredGroups.map(({ course, modules }) => (
-            <section key={course.id}>
-              <h2 className="tg-course-title">{course.title}</h2>
-              <div className="stack" style={{ gap: 18 }}>
-                {modules.map(({ module, lessons }) => (
-                  <TestModuleBlock
-                    key={module.id}
-                    module={module}
-                    lessons={lessons}
-                    onManage={setManagingLesson}
-                    onChanged={load}
-                    onError={notify}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        <>
+          <div className="stack mt-3" style={{ gap: 26 }}>
+            {pageGroups.map(({ course, modules }) => (
+              <section key={course.id}>
+                <h2 className="tg-course-title">{course.title}</h2>
+                <div className="stack" style={{ gap: 18 }}>
+                  {modules.map(({ module, lessons }) => {
+                    const stats = moduleStatsById.get(module.id) || { total: lessons.length, opened: 0, missing: 0 };
+                    return (
+                      <TestModuleBlock
+                        key={module.id}
+                        module={module}
+                        lessons={lessons}
+                        totalCount={stats.total}
+                        openedCount={stats.opened}
+                        missingCount={stats.missing}
+                        onManage={setManagingLesson}
+                        onChanged={load}
+                        onError={notify}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
+          )}
+        </>
       )}
 
       {managingLive && (
@@ -288,34 +344,22 @@ function TestCreateCard({ courses, onCreated, onError }) {
 
 const TESTS_PER_PAGE = 12;
 
-function TestModuleBlock({ module, lessons, onManage, onChanged, onError }) {
-  const missing = lessons.filter((l) => !l.quiz_id).length;
-  const opened = lessons.length - missing;
-
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(lessons.length / TESTS_PER_PAGE));
-
-  // Qidiruv natijasi o'zgarsa (test soni farq qilsa) birinchi sahifaga qaytamiz
-  useEffect(() => { setPage(1); }, [lessons.length]);
-
-  const currentPage = Math.min(page, totalPages);
-  const pageLessons = lessons.slice((currentPage - 1) * TESTS_PER_PAGE, currentPage * TESTS_PER_PAGE);
-
+function TestModuleBlock({ module, lessons, totalCount, openedCount, missingCount, onManage, onChanged, onError }) {
   return (
     <div>
       <div className="row-between mb-2">
         <div className="row" style={{ gap: 8 }}>
           <strong className="small">{module.title}</strong>
-          <span className="chip">{lessons.length} ta test</span>
+          <span className="chip">{totalCount} ta test</span>
         </div>
         <span className="small dim">
-          {opened}/{lessons.length} ochilgan
-          {missing > 0 && <span className="badge badge-warning" style={{ marginLeft: 8 }}>{missing} ochilmagan</span>}
+          {openedCount}/{totalCount} ochilgan
+          {missingCount > 0 && <span className="badge badge-warning" style={{ marginLeft: 8 }}>{missingCount} ochilmagan</span>}
         </span>
       </div>
 
       <div className="tg-grid">
-        {pageLessons.map((lesson) => (
+        {lessons.map((lesson) => (
           <TestCard
             key={lesson.id}
             lesson={lesson}
@@ -325,10 +369,6 @@ function TestModuleBlock({ module, lessons, onManage, onChanged, onError }) {
           />
         ))}
       </div>
-
-      {totalPages > 1 && (
-        <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
-      )}
 
       <style jsx>{`
         .tg-grid {
