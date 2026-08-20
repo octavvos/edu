@@ -2,8 +2,20 @@
 
 from rest_framework import serializers
 
-from apps.assessments.models import Choice, Question, QuestionType, Quiz
+from apps.assessments.models import Choice, Question, QuestionType, Quiz, QuizAssignment
 from apps.core.fields import I18nCharField
+
+
+class QuizAssignmentSerializer(serializers.ModelSerializer):
+    group_name = serializers.CharField(source="group.name", read_only=True)
+
+    class Meta:
+        model = QuizAssignment
+        fields = ("id", "quiz", "group", "group_name")
+
+
+class QuizAssignSerializer(serializers.Serializer):
+    group_id = serializers.UUIDField()
 
 
 class QuizSettingsSerializer(serializers.ModelSerializer):

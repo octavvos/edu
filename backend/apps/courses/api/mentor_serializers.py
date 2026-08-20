@@ -15,12 +15,14 @@ class MentorLessonSerializer(serializers.ModelSerializer):
     video_asset = VideoAssetSerializer(read_only=True)
     quiz_id = serializers.SerializerMethodField()
     sent_to_groups = serializers.SerializerMethodField()
+    quiz_sent_groups = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
         fields = (
             "id", "type", "title", "text_content", "order", "is_required",
             "is_free_preview", "materials", "video_asset", "quiz_id", "sent_to_groups",
+            "quiz_sent_groups",
         )
 
     def get_quiz_id(self, obj) -> str | None:
@@ -31,6 +33,15 @@ class MentorLessonSerializer(serializers.ModelSerializer):
         return [
             {"id": str(hw.group_id), "name": hw.group.name}
             for hw in obj.homeworks.all()
+        ]
+
+    def get_quiz_sent_groups(self, obj) -> list:
+        """Test qaysi guruhlarga jo'natilgan — Testlar bo'limida belgi sifatida ko'rsatiladi."""
+        if not hasattr(obj, "quiz"):
+            return []
+        return [
+            {"id": str(qa.group_id), "name": qa.group.name}
+            for qa in obj.quiz.assignments.all()
         ]
 
 

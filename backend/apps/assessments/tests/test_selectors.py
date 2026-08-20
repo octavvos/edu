@@ -1,10 +1,11 @@
 import pytest
 
-from apps.accounts.tests.factories import UserFactory
+from apps.accounts.tests.factories import PendingUserFactory, UserFactory
 from apps.assessments import selectors, services
 from apps.assessments.models import Choice, Question, QuestionType, Quiz
 from apps.courses.tests.factories import CourseFactory, LessonFactory, ModuleFactory
-from apps.enrollment.services import enroll_free
+from apps.groups import services as group_services
+from apps.groups.tests.factories import GroupFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -19,13 +20,24 @@ def _make_quiz(course):
     return lesson, quiz, question, correct
 
 
-def test_get_my_quizzes_lists_enrolled_course_tests():
-    user = UserFactory()
-    course = CourseFactory(price=0)
-    lesson, quiz, question, correct = _make_quiz(course)
-    enroll_free(user=user, course=course)
+def _admit(mentor, group):
+    student = PendingUserFactory()
+    group_services.approve_join_request(
+        request_obj=group_services.create_join_request(student=student, group=group),
+        mentor=mentor,
+    )
+    return student
 
-    results = selectors.get_my_quizzes(user)
+
+def test_get_my_quizzes_lists_only_tests_sent_to_own_group():
+    mentor = UserFactory()
+    course = CourseFactory(price=0)
+    group = GroupFactory(course=course, mentor=mentor)
+    student = _admit(mentor, group)
+    lesson, quiz, question, correct = _make_quiz(course)
+    services.assign_quiz_to_group(mentor=mentor, quiz=quiz, group=group)
+
+    results = selectors.get_my_quizzes(student)
 
     assert len(results) == 1
     row = results[0]
@@ -39,28 +51,47 @@ def test_get_my_quizzes_lists_enrolled_course_tests():
     assert row["has_in_progress"] is False
 
 
-def test_get_my_quizzes_excludes_unenrolled_courses():
+def test_get_my_quizzes_hides_tests_not_sent_to_group():
+    mentor = UserFactory()
+    course = CourseFactory(price=0)
+    group = GroupFactory(course=course, mentor=mentor)
+    student = _admit(mentor, group)
+    _make_quiz(course)
+    # assign_quiz_to_group chaqirilmadi — test hali yuborilmagan
+
+    assert selectors.get_my_quizzes(student) == []
+
+
+def test_get_my_quizzes_excludes_students_without_group():
     user = UserFactory()
     course = CourseFactory(price=0)
-    _make_quiz(course)
-    # enrollment yo'q — test ro'yxatda ko'rinmasligi kerak
+    _, quiz, _, _ = _make_quiz(course)
+    mentor = UserFactory()
+    group = GroupFactory(course=course, mentor=mentor)
+    services.assign_quiz_to_group(mentor=mentor, quiz=quiz, group=group)
+    # `user` hech qaysi guruhga a'zo emas
 
     assert selectors.get_my_quizzes(user) == []
 
 
 def test_get_my_quizzes_reflects_best_score_and_in_progress():
-    user = UserFactory()
+    mentor = UserFactory()
     course = CourseFactory(price=0)
+    group = GroupFactory(course=course, mentor=mentor)
+    student = _admit(mentor, group)
     lesson, quiz, question, correct = _make_quiz(course)
-    enrollment = enroll_free(user=user, course=course)
+    services.assign_quiz_to_group(mentor=mentor, quiz=quiz, group=group)
 
-    attempt = services.start_attempt(user=user, enrollment=enrollment, quiz=quiz)
+    from apps.enrollment.models import Enrollment
+
+    enrollment = Enrollment.objects.get(user=student, course=course)
+    attempt = services.start_attempt(user=student, enrollment=enrollment, quiz=quiz)
     services.submit_answer(attempt=attempt, question=question, selected_choice_ids=[str(correct.id)])
     services.finalize_attempt(attempt=attempt)
 
-    second_attempt = services.start_attempt(user=user, enrollment=enrollment, quiz=quiz)
+    second_attempt = services.start_attempt(user=student, enrollment=enrollment, quiz=quiz)
 
-    row = selectors.get_my_quizzes(user)[0]
+    row = selectors.get_my_quizzes(student)[0]
     assert row["attempt_count"] == 2
     assert row["best_score"] == 100.0
     assert row["passed"] is True

@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from apps.assessments.models import Answer, Attempt, AttemptStatus, Choice, Question, QuestionType, Quiz
+from apps.assessments.models import Answer, Attempt, AttemptStatus, Choice, Question, QuestionType, Quiz, QuizAssignment
 from apps.assessments.selectors import get_attempt_count, get_latest_attempt
 from apps.core.exceptions import DomainError
 
@@ -32,6 +32,55 @@ def update_quiz(*, quiz: Quiz, **fields) -> Quiz:
         setattr(quiz, key, value)
     quiz.save()
     return quiz
+
+
+@transaction.atomic
+def assign_quiz_to_group(*, mentor, quiz: Quiz, group) -> QuizAssignment:
+    """Mentor tanlangan guruhga test jo'natadi. Test faqat shu guruh
+    o'quvchilariga ko'rinadi (`selectors.get_my_quizzes`) — Homework'ning
+    guruh bo'yicha jo'natish patternidagi kabi."""
+    from apps.core.events import EVENT_TEST_ASSIGNED, publish
+    from apps.core.models import resolve_i18n
+    from apps.courses.services import assert_can_manage_lesson
+    from apps.groups.models import MembershipStatus
+
+    lesson = quiz.lesson
+    assert_can_manage_lesson(mentor=mentor, lesson=lesson)
+
+    if group.mentor_id != mentor.id and not mentor.is_superuser:
+        raise AssessmentError("Bu guruh sizga biriktirilmagan", code="not_your_group", status_code=403)
+    if group.course_id != lesson.module.course_id:
+        raise AssessmentError("Guruh bu kursga tegishli emas", code="group_course_mismatch")
+
+    assignment, created = QuizAssignment.objects.get_or_create(quiz=quiz, group=group)
+    if created:
+        lesson_title = resolve_i18n(lesson.title, "uz")
+        student_ids = group.memberships.filter(status=MembershipStatus.ACTIVE).values_list("student_id", flat=True)
+        for student_id in student_ids:
+            publish(
+                EVENT_TEST_ASSIGNED,
+                user_id=str(student_id), lesson_title=lesson_title, quiz_id=str(quiz.id),
+            )
+    return assignment
+
+
+def unassign_quiz_from_group(*, mentor, quiz: Quiz, group) -> None:
+    from apps.courses.services import assert_can_manage_lesson
+
+    assert_can_manage_lesson(mentor=mentor, lesson=quiz.lesson)
+    if group.mentor_id != mentor.id and not mentor.is_superuser:
+        raise AssessmentError("Bu guruh sizga biriktirilmagan", code="not_your_group", status_code=403)
+    QuizAssignment.objects.filter(quiz=quiz, group=group).delete()
+
+
+def assert_quiz_visible_to_student(*, user, quiz: Quiz) -> None:
+    """O'quvchi faqat mentor tanlab jo'natgan guruhiga tegishli testlarni ko'rishi/
+    boshlashi mumkin — aks holda kurs bo'yicha barcha test ochilib qolardi."""
+    from apps.groups.selectors import get_active_membership
+
+    membership = get_active_membership(user)
+    if not membership or not QuizAssignment.objects.filter(quiz=quiz, group=membership.group).exists():
+        raise AssessmentError("Bu test sizga hali yuborilmagan", code="quiz_not_assigned", status_code=403)
 
 
 def _validate_choices(question_type: str, choices: list[dict]) -> None:

@@ -36,6 +36,8 @@ urlpatterns = [
          name="mentor-quiz-questions"),
     path("questions/<uuid:question_id>/", quiz_views.MentorQuestionDetailView.as_view(),
          name="mentor-question-detail"),
+    path("lessons/<uuid:lesson_id>/quiz-assignment/", quiz_views.MentorQuizAssignmentView.as_view(),
+         name="mentor-quiz-assignment"),
     path("groups/", views.MentorGroupListView.as_view(), name="mentor-groups"),
     path("groups/<uuid:group_id>/members/", views.MentorGroupMembersView.as_view(),
          name="mentor-group-members"),

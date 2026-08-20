@@ -3,19 +3,21 @@ from apps.core.models import resolve_i18n
 
 
 def get_my_quizzes(user, lang: str = "uz") -> list[dict]:
-    """O'quvchining faol enrollment'lari bo'yicha mavjud barcha testlar (Testlarim)."""
-    from apps.courses.models import LessonType
-    from apps.enrollment.models import Enrollment, EnrollmentStatus
+    """O'quvchining o'z guruhiga mentor tanlab jo'natgan testlari (Testlarim) —
+    kursga yozilgan bo'lishning o'zi yetarli emas, test aynan shu guruhga
+    yuborilgan bo'lishi kerak (Homework'ning guruh bo'yicha ko'rinish patterni)."""
+    from apps.groups.selectors import get_active_membership
 
-    course_ids = Enrollment.objects.filter(
-        user=user, status=EnrollmentStatus.ACTIVE,
-    ).values_list("course_id", flat=True)
+    membership = get_active_membership(user)
+    if not membership:
+        return []
 
     quizzes = (
-        Quiz.objects.filter(lesson__type=LessonType.QUIZ, lesson__module__course_id__in=list(course_ids))
+        Quiz.objects.filter(assignments__group=membership.group)
         .select_related("lesson__module__course")
         .prefetch_related("questions")
-        .order_by("lesson__module__course_id", "lesson__module__order", "lesson__order")
+        .distinct()
+        .order_by("lesson__module__order", "lesson__order")
     )
 
     results = []

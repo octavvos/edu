@@ -49,6 +49,17 @@ def _on_homework_assigned(user_id: str, lesson_title: str, homework_id: str, **k
     )
 
 
+@events.on(events.EVENT_TEST_ASSIGNED)
+def _on_test_assigned(user_id: str, lesson_title: str, quiz_id: str, **kwargs):
+    from apps.notifications.models import NotificationEvent
+    from apps.notifications.tasks import dispatch_notification
+
+    dispatch_notification.delay(
+        user_id=user_id, event=NotificationEvent.TEST_ASSIGNED,
+        context={"text": f"Sizga yangi test yuborildi: {lesson_title}", "quiz_id": quiz_id},
+    )
+
+
 @events.on(events.EVENT_LESSON_COMPLETED)
 def _maybe_notify_next_lesson(user_id: str, enrollment_id: str, lesson_id: str, **kwargs):
     """Drip-content ochilganda N-04 'yangi dars ochildi' bildirishnomasi shu yerdan kelib chiqadi."""

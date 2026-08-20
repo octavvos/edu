@@ -14,6 +14,7 @@ class NotificationEvent(models.TextChoices):
     DEADLINE_2H = "deadline_2h", "Deadline 2 soat qoldi"
     ASSIGNMENT_GRADED = "assignment_graded", "Vazifa tekshirildi"
     HOMEWORK_ASSIGNED = "homework_assigned", "Yangi vazifa yuborildi"
+    TEST_ASSIGNED = "test_assigned", "Yangi test yuborildi"
     NEW_COMMENT = "new_comment", "Yangi izoh/javob"
     PAYMENT_SUCCEEDED = "payment_succeeded", "To'lov muvaffaqiyatli"
     CERTIFICATE_READY = "certificate_ready", "Sertifikat tayyor"

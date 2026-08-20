@@ -30,6 +30,7 @@ class QuizStartView(APIView):
         from apps.enrollment.services import assert_lesson_access
 
         try:
+            services.assert_quiz_visible_to_student(user=request.user, quiz=quiz)
             enrollment = assert_lesson_access(user=request.user, lesson=quiz.lesson)
             attempt = services.start_attempt(user=request.user, enrollment=enrollment, quiz=quiz)
         except DomainError as exc:

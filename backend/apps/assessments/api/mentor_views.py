@@ -12,6 +12,8 @@ from apps.assessments.api.mentor_serializers import (
     QuestionMentorSerializer,
     QuestionUpdateSerializer,
     QuestionWriteSerializer,
+    QuizAssignSerializer,
+    QuizAssignmentSerializer,
     QuizDetailSerializer,
     QuizSettingsSerializer,
 )
@@ -159,4 +161,62 @@ class MentorQuestionDetailView(APIView):
         except DomainError as exc:
             return Response({"detail": exc.detail}, status=exc.status_code)
         services.delete_question(question=question)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MentorQuizAssignmentView(APIView):
+    """
+    GET    /api/v1/mentor/lessons/{lesson_id}/quiz-assignment/ — shu testga
+           qaysi guruhlar jo'natilgani
+    POST   /api/v1/mentor/lessons/{lesson_id}/quiz-assignment/ — tanlangan
+           guruhga jo'natish
+    DELETE /api/v1/mentor/lessons/{lesson_id}/quiz-assignment/?group_id=... —
+           guruhdan bekor qilish
+    """
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "content.manage"
+
+    def _get_quiz(self, lesson_id):
+        lesson = get_object_or_404(Lesson.objects.select_related("module__course"), id=lesson_id)
+        quiz = get_object_or_404(Quiz.objects.select_related("lesson__module__course"), lesson=lesson)
+        return quiz
+
+    def get(self, request, lesson_id):
+        quiz = self._get_quiz(lesson_id)
+        try:
+            _assert_owns_quiz(request.user, quiz)
+        except DomainError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+        assignments = quiz.assignments.select_related("group").filter(group__mentor=request.user).order_by("group__name")
+        return Response(QuizAssignmentSerializer(assignments, many=True).data)
+
+    @extend_schema(request=QuizAssignSerializer, responses=QuizAssignmentSerializer)
+    def post(self, request, lesson_id):
+        from apps.groups.models import Group
+
+        quiz = self._get_quiz(lesson_id)
+        serializer = QuizAssignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        group = get_object_or_404(Group, id=serializer.validated_data["group_id"])
+
+        try:
+            assignment = services.assign_quiz_to_group(mentor=request.user, quiz=quiz, group=group)
+        except DomainError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+        return Response(QuizAssignmentSerializer(assignment).data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, lesson_id):
+        from apps.groups.models import Group
+
+        quiz = self._get_quiz(lesson_id)
+        group_id = request.query_params.get("group_id")
+        if not group_id:
+            return Response({"detail": "group_id talab qilinadi"}, status=status.HTTP_400_BAD_REQUEST)
+        group = get_object_or_404(Group, id=group_id)
+
+        try:
+            services.unassign_quiz_from_group(mentor=request.user, quiz=quiz, group=group)
+        except DomainError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
         return Response(status=status.HTTP_204_NO_CONTENT)

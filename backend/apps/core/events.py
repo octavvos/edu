@@ -55,3 +55,5 @@ EVENT_STUDENT_ADMITTED = "student_admitted_to_group"
 EVENT_STUDENT_TRANSFERRED = "student_transferred_between_groups"
 # Mentor guruhga vazifa jo'natdi -> guruh a'zolariga bildirishnoma
 EVENT_HOMEWORK_ASSIGNED = "homework_assigned"
+# Mentor guruhga test jo'natdi -> guruh a'zolariga bildirishnoma
+EVENT_TEST_ASSIGNED = "test_assigned"

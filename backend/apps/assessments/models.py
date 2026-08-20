@@ -29,6 +29,21 @@ class Quiz(BaseModel):
         db_table = "assessments_quiz"
 
 
+class QuizAssignment(BaseModel):
+    """Mentor testni tanlab guruhga jo'natadi — faqat shu guruh a'zolariga
+    ko'rinadi (Homework'ning guruh bo'yicha jo'natish patterniga o'xshash)."""
+
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="assignments")
+    group = models.ForeignKey("groups.Group", on_delete=models.CASCADE, related_name="quiz_assignments")
+
+    class Meta:
+        db_table = "assessments_quiz_assignment"
+        constraints = [
+            models.UniqueConstraint(fields=["quiz", "group"], name="uniq_quiz_assignment_per_group"),
+        ]
+        indexes = [models.Index(fields=["group"])]
+
+
 class QuestionType(models.TextChoices):
     """4.6-band: 4 ta savol turi."""
 

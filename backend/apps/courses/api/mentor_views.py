@@ -31,7 +31,7 @@ class MentorCourseListView(APIView):
     def get(self, request):
         courses = selectors.get_mentor_courses(request.user).prefetch_related(
             "modules__lessons__materials", "modules__lessons__video_asset", "modules__lessons__quiz",
-            "modules__lessons__homeworks__group",
+            "modules__lessons__homeworks__group", "modules__lessons__quiz__assignments__group",
         )
         return Response(
             MentorCourseSerializer(courses, many=True, context={"request": request}).data,
