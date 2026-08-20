@@ -184,6 +184,15 @@ export const studentApi = {
   leaderboard: () => api.get("/groups/leaderboard/"),
 };
 
+export const assessmentsApi = {
+  mine: () => api.get("/assessments/mine/"),
+  start: (lessonId) => api.post(`/assessments/quizzes/${lessonId}/start/`),
+  answer: (attemptId, payload) => api.post(`/assessments/attempts/${attemptId}/answer/`, payload),
+  submit: (attemptId) => api.post(`/assessments/attempts/${attemptId}/submit/`),
+  attempts: (quizLessonId) =>
+    api.get("/assessments/attempts/", { params: quizLessonId ? { quiz_lesson_id: quizLessonId } : {} }),
+};
+
 export const managerApi = {
   groups: () => api.get("/manager/groups/"),
   createGroup: (payload) => api.post("/manager/groups/", payload),
