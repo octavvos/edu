@@ -169,6 +169,13 @@ export const mentorApi = {
     api.post(`/mentor/lessons/${lessonId}/quiz-assignment/`, { group_id: groupId }),
   unsendTest: (lessonId, groupId) =>
     api.delete(`/mentor/lessons/${lessonId}/quiz-assignment/`, { params: { group_id: groupId } }),
+  // Test natijalari tahlili
+  quizResultGroups: () => api.get("/mentor/quiz-results/groups/"),
+  quizResultLeaderboard: (groupId) => api.get(`/mentor/quiz-results/groups/${groupId}/`),
+  quizResultStudent: (groupId, studentId) =>
+    api.get(`/mentor/quiz-results/groups/${groupId}/students/${studentId}/`),
+  quizResultAttempt: (groupId, attemptId) =>
+    api.get(`/mentor/quiz-results/groups/${groupId}/attempts/${attemptId}/`),
   // Davomat
   attendance: (groupId, date) =>
     api.get(`/mentor/groups/${groupId}/attendance/`, { params: date ? { date } : {} }),
