@@ -11,7 +11,7 @@ export default function EditQuizModal({ lesson, onClose, onError }) {
       <div className="card eqm-modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="row-between">
           <div>
-            <h3 style={{ margin: 0 }}>{lesson.title}</h3>
+            <h3 style={{ margin: 0 }}>{lesson.order}-dars: {lesson.title}</h3>
             <p className="small dim" style={{ margin: "2px 0 0" }}>Test sozlamalari va savollari</p>
           </div>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>

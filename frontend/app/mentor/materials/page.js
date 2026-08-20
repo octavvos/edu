@@ -186,11 +186,14 @@ function ModuleList({ module, selectedId, onSelect }) {
                   color: active ? "var(--primary)" : "var(--text)",
                 }}
               >
-                <span className="small" style={{
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  fontWeight: active ? 600 : 400,
-                }}>
-                  {lesson.title}
+                <span className="row small" style={{ gap: 5, minWidth: 0, overflow: "hidden" }}>
+                  <span className="dim" style={{ flexShrink: 0 }}>{lesson.order}.</span>
+                  <span style={{
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    fontWeight: active ? 600 : 400,
+                  }}>
+                    {lesson.title}
+                  </span>
                 </span>
                 {count > 0 && (
                   <span className="row" style={{ gap: 3, flexShrink: 0, color: "var(--success)" }}>
@@ -231,6 +234,7 @@ function MaterialPanel({ lesson, onChanged, onError }) {
       <div className="row" style={{ gap: 8 }}>
         <span className="badge badge-neutral">{LESSON_TYPE_LABEL[lesson.type] || lesson.type}</span>
         <span className="chip">{lesson.moduleTitle}</span>
+        <span className="chip">{lesson.order}-dars</span>
       </div>
       <h3 className="mt-2">{lesson.title}</h3>
 

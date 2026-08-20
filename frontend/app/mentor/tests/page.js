@@ -443,8 +443,11 @@ function TestCard({ lesson, onManage, onChanged, onError }) {
   return (
     <div className={`tc-card tc-${dotTone}`}>
       <div className="row-between">
-        <div className={`tc-icon tc-icon-${dotTone}`}>
-          <HelpCircle width={16} height={16} />
+        <div className="row" style={{ gap: 8 }}>
+          <div className={`tc-icon tc-icon-${dotTone}`}>
+            <HelpCircle width={16} height={16} />
+          </div>
+          <span className="chip" style={{ fontSize: 11 }}>{lesson.order}-dars</span>
         </div>
         {isOpened ? (
           <button type="button" className="btn btn-ghost btn-sm" onClick={onManage} title="Boshqarish" aria-label="Boshqarish">
