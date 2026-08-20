@@ -24,6 +24,7 @@ export default function AppShell({ user, children, narrow = false }) {
     links.push({ href: "/mentor", label: "So'rovlar" });
     links.push({ href: "/mentor/courses", label: "Kurslar" });
     links.push({ href: "/mentor/materials", label: "Materiallar" });
+    links.push({ href: "/mentor/tests", label: "Testlar" });
     links.push({ href: "/mentor/homework", label: "Uy vazifalari" });
     links.push({ href: "/mentor/students", label: "O'quvchilar" });
     links.push({ href: "/mentor/groups", label: "Guruhlarim" });
