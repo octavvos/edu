@@ -197,7 +197,7 @@ main {
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: 28px 24px 56px;
 }
 
 main.main-narrow { max-width: 460px; }
@@ -208,7 +208,7 @@ main.main-narrow { max-width: 460px; }
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .page-head p {
@@ -225,9 +225,11 @@ main.main-narrow { max-width: 460px; }
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 18px;
   box-shadow: var(--shadow-sm);
 }
+
+.card-compact { padding: 14px 16px; }
 
 .card-hover {
   transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease),
@@ -244,7 +246,7 @@ main.main-narrow { max-width: 460px; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 13px;
 }
 
 .grid {
@@ -253,7 +255,7 @@ main.main-narrow { max-width: 460px; }
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
-.stack { display: flex; flex-direction: column; gap: 16px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .spacer { flex: 1; }
@@ -267,7 +269,7 @@ main.main-narrow { max-width: 460px; }
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 9px 16px;
+  padding: 8px 15px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--primary);
@@ -658,6 +660,123 @@ tbody tr:hover { background: var(--bg-subtle); }
 }
 
 /* ==========================================================================
+   Fayl/havola pillari — material, topshiriq fayli, GitHub havolasi va h.k.
+   ========================================================================== */
+
+.pill-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--text-secondary);
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+  max-width: 100%;
+}
+.pill-link:hover {
+  background: var(--primary-soft);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  color: var(--primary);
+}
+.pill-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Holat chizig'i bo'lgan karta — chap tomonda rangli ustun (vazifa, topshiriq)
+   ========================================================================== */
+
+.rail-card {
+  position: relative;
+  overflow: hidden;
+}
+.rail-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--border-strong);
+}
+.rail-card-success::before { background: var(--success); }
+.rail-card-danger::before  { background: var(--danger); }
+.rail-card-warning::before { background: var(--warning); }
+.rail-card-info::before    { background: var(--info); }
+
+/* ==========================================================================
+   Ball (baho) belgisi
+   ========================================================================== */
+
+.score-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  background: var(--success-soft);
+  color: var(--success);
+  flex-shrink: 0;
+}
+.score-badge-value { font-size: 21px; font-weight: 750; letter-spacing: -0.03em; }
+.score-badge-max { font-size: 12px; font-weight: 600; opacity: 0.75; }
+
+/* ==========================================================================
+   Mentor izohi / fikr bloki
+   ========================================================================== */
+
+.feedback-box {
+  display: flex;
+  gap: 10px;
+  padding: 12px 15px;
+  border-radius: var(--radius);
+  background: var(--info-soft);
+  border: 1px solid color-mix(in srgb, var(--info) 22%, transparent);
+}
+.feedback-box-icon { flex-shrink: 0; color: var(--info); margin-top: 1px; }
+.feedback-box p { font-size: 13.5px; line-height: 1.5; color: var(--text); }
+.feedback-box-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--info);
+  margin-bottom: 3px;
+}
+
+/* ==========================================================================
+   Fayl tashlash zonasi (drag & drop)
+   ========================================================================== */
+
+.dropzone {
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 18px;
+  text-align: center;
+  background: var(--bg-subtle);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.dropzone-active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.dropzone-icon {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 8px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
    Yordamchi klasslar
    ========================================================================== */
 
@@ -799,10 +918,18 @@ tbody tr:hover { background: var(--bg-subtle); }
 
 .notif-item {
   display: flex;
+  width: 100%;
   gap: 10px;
   padding: 11px 14px;
+  border: none;
   border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
 }
+.notif-item:hover { background: var(--bg-subtle); }
 .notif-item:last-child { border-bottom: none; }
 
 .notif-dot {

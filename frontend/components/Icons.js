@@ -158,3 +158,36 @@ export const Bell = (p) => (
     <path d="M10 20a2 2 0 0 0 4 0" />
   </svg>
 );
+
+export const LinkIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M10 14a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.1" />
+    <path d="M14 10a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1" />
+  </svg>
+);
+
+export const MessageCircle = (p) => (
+  <svg {...base} {...p}>
+    <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.3 0-2.5-.3-3.6-.8L3 21l1.4-4.2A8.4 8.4 0 0 1 3.5 12 8.5 8.5 0 0 1 12 3.5 8.5 8.5 0 0 1 21 12Z" />
+  </svg>
+);
+
+export const Sun = (p) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="4.5" />
+    <path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+  </svg>
+);
+
+export const Moon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" />
+  </svg>
+);
+
+export const Sparkle = (p) => (
+  <svg {...base} {...p}>
+    <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+    <path d="m6.5 6.5 2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2" />
+  </svg>
+);

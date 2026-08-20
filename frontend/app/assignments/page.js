@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "../../components/AppShell";
-import { Clock, FileText, Inbox, Upload } from "../../components/Icons";
+import {
+  Check, Clock, FileText, Inbox, LinkIcon, MessageCircle, Upload,
+} from "../../components/Icons";
 import { useNotify } from "../../components/NotificationProvider";
 import { errorMessage, studentApi } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -37,6 +39,12 @@ export default function AssignmentsPage() {
     return <div className="app-shell"><main><div className="skeleton" style={{ height: 200 }} /></main></div>;
   }
 
+  const total = rows.length;
+  const accepted = rows.filter((r) => r.submission?.status === "accepted").length;
+  const pending = total - accepted;
+  const scores = rows.filter((r) => r.submission?.grade).map((r) => r.submission.grade.score);
+  const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+
   return (
     <AppShell user={user}>
       <div className="page-head">
@@ -45,6 +53,31 @@ export default function AssignmentsPage() {
           <p>Mentoringiz tomonidan yuborilgan vazifalar</p>
         </div>
       </div>
+
+      {!dataLoading && total > 0 && (
+        <div className="stats mb-3">
+          <div className="stat">
+            <div className="stat-label">Jami vazifa</div>
+            <div className="stat-value">{total}</div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">Qabul qilingan</div>
+            <div className="stat-value" style={{ color: accepted ? "var(--success)" : undefined }}>
+              {accepted}
+            </div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">Kutilmoqda</div>
+            <div className="stat-value" style={{ color: pending ? "var(--warning)" : undefined }}>
+              {pending}
+            </div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">O&apos;rtacha ball</div>
+            <div className="stat-value">{avgScore === null ? "—" : avgScore}</div>
+          </div>
+        </div>
+      )}
 
       {dataLoading ? (
         <div className="stack">
@@ -78,10 +111,16 @@ function AssignmentCard({ row, onChanged, onError }) {
   const isAccepted = submission?.status === "accepted";
   const overdue = row.deadline_at && !isAccepted && new Date(row.deadline_at) < new Date();
 
+  const rail =
+    submission?.status === "accepted" ? "rail-card-success" :
+    submission?.status === "needs_revision" ? "rail-card-warning" :
+    overdue ? "rail-card-danger" :
+    submission ? "rail-card-info" : "";
+
   return (
-    <article className="card fade-in">
-      <div className="row-between" style={{ alignItems: "flex-start" }}>
-        <div>
+    <article className={`card card-hover rail-card ${rail} fade-in`} style={{ paddingLeft: 22 }}>
+      <div className="row-between" style={{ alignItems: "flex-start", gap: 14 }}>
+        <div style={{ minWidth: 0 }}>
           <div className="row" style={{ gap: 7 }}>
             <h3 style={{ margin: 0 }}>{row.lesson_title}</h3>
             {meta && <span className={`badge badge-${meta.badge}`}>{meta.label}</span>}
@@ -92,55 +131,65 @@ function AssignmentCard({ row, onChanged, onError }) {
             )}
           </div>
           {row.deadline_at && (
-            <p className="small muted mt-1">
-              Muddat: {new Date(row.deadline_at).toLocaleString("uz-UZ")}
-            </p>
+            <div className="row mt-1" style={{ gap: 5 }}>
+              <Clock width={12} height={12} className="dim" />
+              <span className="small dim">
+                Muddat: {new Date(row.deadline_at).toLocaleString("uz-UZ")}
+              </span>
+            </div>
           )}
         </div>
+
         {submission?.grade && (
-          <span className="chip">
-            Ball: <strong>{submission.grade.score}</strong> / {row.max_score}
-          </span>
+          <div className="score-badge">
+            <span className="score-badge-value">{submission.grade.score}</span>
+            <span className="score-badge-max">/ {row.max_score}</span>
+          </div>
         )}
       </div>
 
-      <p className="mt-2">{row.instructions}</p>
+      <p className="mt-2" style={{ color: "var(--text-secondary)", lineHeight: 1.55 }}>
+        {row.instructions}
+      </p>
 
       {(row.material || row.presentation) && (
-        <div className="row mt-2" style={{ gap: 16, flexWrap: "wrap" }}>
+        <div className="row mt-2" style={{ gap: 8 }}>
           {row.material && (
-            <a href={row.material.file} target="_blank" rel="noreferrer" className="row small" style={{ gap: 6 }}>
-              <FileText width={14} height={14} />
-              {row.material.title || row.material.original_filename}
+            <a href={row.material.file} target="_blank" rel="noreferrer" className="pill-link">
+              <FileText width={13} height={13} />
+              <span>{row.material.title || row.material.original_filename}</span>
             </a>
           )}
           {row.presentation && (
-            <a href={row.presentation.file} target="_blank" rel="noreferrer" className="row small" style={{ gap: 6 }}>
-              <FileText width={14} height={14} />
-              {row.presentation.title || row.presentation.original_filename}
+            <a href={row.presentation.file} target="_blank" rel="noreferrer" className="pill-link">
+              <FileText width={13} height={13} />
+              <span>{row.presentation.title || row.presentation.original_filename}</span>
             </a>
           )}
         </div>
       )}
 
       {submission && (submission.file || submission.link || submission.text) && (
-        <div className="mt-2" style={{
-          padding: "11px 13px", background: "var(--bg-subtle)",
-          borderRadius: "var(--radius)", fontSize: 14,
-        }}>
+        <div className="mt-2 card-compact" style={{ background: "var(--bg-subtle)", border: "none", boxShadow: "none" }}>
           <div className="stat-label mb-1">
             Topshirganingiz · {new Date(submission.submitted_at).toLocaleString("uz-UZ")}
           </div>
-          {submission.text && <p>{submission.text}</p>}
-          <div className="row" style={{ gap: 12 }}>
+          {submission.text && (
+            <p className="small" style={{ color: "var(--text-secondary)", marginBottom: 8 }}>
+              {submission.text}
+            </p>
+          )}
+          <div className="row" style={{ gap: 8 }}>
             {submission.file && (
-              <a href={submission.file} target="_blank" rel="noreferrer" className="small">
-                Yuklangan fayl
+              <a href={submission.file} target="_blank" rel="noreferrer" className="pill-link">
+                <FileText width={13} height={13} />
+                <span>Yuklangan fayl</span>
               </a>
             )}
             {submission.link && (
-              <a href={submission.link} target="_blank" rel="noreferrer" className="small">
-                {submission.link}
+              <a href={submission.link} target="_blank" rel="noreferrer" className="pill-link">
+                <LinkIcon width={13} height={13} />
+                <span>{submission.link.replace(/^https?:\/\//, "")}</span>
               </a>
             )}
           </div>
@@ -148,8 +197,12 @@ function AssignmentCard({ row, onChanged, onError }) {
       )}
 
       {submission?.grade?.feedback && (
-        <div className="alert alert-info mt-2" style={{ marginBottom: 0 }}>
-          <strong>Mentor izohi:</strong> {submission.grade.feedback}
+        <div className="feedback-box mt-2">
+          <MessageCircle width={16} height={16} className="feedback-box-icon" />
+          <div>
+            <div className="feedback-box-label">Mentor izohi</div>
+            <p>{submission.grade.feedback}</p>
+          </div>
         </div>
       )}
 
@@ -164,7 +217,12 @@ function SubmitForm({ lessonId, submission, onChanged, onError }) {
   const [file, setFile] = useState(null);
   const [link, setLink] = useState(submission?.link || "");
   const [text, setText] = useState(submission?.text || "");
+  const [dragOver, setDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  function pickFile(f) {
+    if (f) setFile(f);
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -185,32 +243,52 @@ function SubmitForm({ lessonId, submission, onChanged, onError }) {
   }
 
   return (
-    <form onSubmit={submit} className="mt-3" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-      <div className="field">
-        <label>Fayl (ZIP yoki PDF)</label>
-        <input type="file" accept=".zip,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+    <form onSubmit={submit} className="mt-3" style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+      <div
+        className={`dropzone ${dragOver ? "dropzone-active" : ""}`}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); pickFile(e.dataTransfer.files?.[0]); }}
+      >
+        <div className="dropzone-icon"><Upload width={16} height={16} /></div>
+        {file ? (
+          <p className="small strong" style={{ margin: 0 }}>{file.name}</p>
+        ) : (
+          <p className="small muted" style={{ margin: 0 }}>ZIP yoki PDF faylni shu yerga tashlang</p>
+        )}
+        <label className="btn btn-ghost btn-sm mt-2" style={{ cursor: "pointer" }}>
+          {file ? "Boshqa fayl tanlash" : "Fayl tanlash"}
+          <input
+            type="file"
+            accept=".zip,.pdf"
+            onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ""; }}
+            style={{ display: "none" }}
+          />
+        </label>
       </div>
-      <div className="field">
-        <label>GitHub havolasi (ixtiyoriy)</label>
-        <input
-          type="url"
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          placeholder="https://github.com/..."
-        />
+
+      <div className="field-row mt-2">
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>GitHub havolasi (ixtiyoriy)</label>
+          <input
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="https://github.com/..."
+          />
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Izoh (ixtiyoriy)</label>
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Qo'shimcha izoh…"
+          />
+        </div>
       </div>
-      <div className="field">
-        <label>Izoh (ixtiyoriy)</label>
-        <textarea
-          rows={2}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Qo'shimcha izoh…"
-        />
-      </div>
-      <button className="btn btn-sm" type="submit" disabled={saving}>
-        {saving && <span className="spinner" />}
-        <Upload width={14} height={14} />
+
+      <button className="btn btn-sm mt-2" type="submit" disabled={saving}>
+        {saving ? <span className="spinner" /> : <Check width={14} height={14} />}
         {submission ? "Qayta yuborish" : "Topshirish"}
       </button>
     </form>
