@@ -120,6 +120,19 @@ function StudentTestRow({ row, open, onToggle, groupId, onError }) {
   );
 }
 
+function optionStyle(choice) {
+  if (choice.is_selected && choice.is_correct) {
+    return { background: "var(--success-soft)", border: "var(--success)" };
+  }
+  if (choice.is_selected && !choice.is_correct) {
+    return { background: "var(--danger-soft)", border: "var(--danger)" };
+  }
+  if (!choice.is_selected && choice.is_correct) {
+    return { background: "transparent", border: "var(--success)" };
+  }
+  return { background: "var(--bg-subtle)", border: "transparent" };
+}
+
 function AttemptBreakdown({ groupId, attemptId, onError }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -153,21 +166,42 @@ function AttemptBreakdown({ groupId, attemptId, onError }) {
 
           {a.question_type === "short_text" ? (
             <div className="small mt-1">
-              <span className="dim">Javobi: </span>
-              {a.text_answer || <span className="dim">(bo&apos;sh)</span>}
-            </div>
-          ) : (
-            <div className="small mt-1">
               <div>
-                <span className="dim">Belgiladi: </span>
-                {a.selected_texts.length ? a.selected_texts.join(", ") : <span className="dim">(bo'sh)</span>}
+                <span className="dim">Javobi: </span>
+                {a.text_answer || <span className="dim">(bo&apos;sh)</span>}
               </div>
               {!a.is_correct && (
                 <div>
                   <span className="dim">To&apos;g&apos;ri javob: </span>
-                  {a.correct_texts.join(", ")}
+                  {a.correct_text_answer}
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="stack mt-2" style={{ gap: 5 }}>
+              {a.choices.map((c) => {
+                const style = optionStyle(c);
+                return (
+                  <div
+                    key={c.id}
+                    className="row"
+                    style={{
+                      gap: 9, padding: "8px 12px", borderRadius: "var(--radius)",
+                      background: style.background, border: `1px solid ${style.border}`,
+                    }}
+                  >
+                    <input
+                      type={a.question_type === "multiple_choice" ? "checkbox" : "radio"}
+                      checked={c.is_selected}
+                      readOnly
+                      style={{ width: "auto", marginBottom: 0 }}
+                    />
+                    <span className="small" style={{ flex: 1 }}>{c.text}</span>
+                    {c.is_correct && <Check width={14} height={14} style={{ color: "var(--success)" }} />}
+                    {c.is_selected && !c.is_correct && <X width={14} height={14} style={{ color: "var(--danger)" }} />}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

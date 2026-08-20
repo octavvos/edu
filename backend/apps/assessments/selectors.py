@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from apps.assessments.models import Attempt, AttemptStatus, Question, Quiz
+from apps.assessments.models import Attempt, AttemptStatus, Question, QuestionType, Quiz
 from apps.core.models import resolve_i18n
 
 
@@ -267,16 +267,22 @@ def get_student_quiz_results(group, student, lang: str = "uz") -> list[StudentQu
 
 
 @dataclass
+class ChoiceOptionRow:
+    id: str
+    text: str
+    is_selected: bool
+    is_correct: bool
+
+
+@dataclass
 class AnswerBreakdownRow:
     question_id: str
     question_text: str
     question_type: str
     points: int
-    selected_choice_ids: list = field(default_factory=list)
-    selected_texts: list = field(default_factory=list)
-    correct_choice_ids: list = field(default_factory=list)
-    correct_texts: list = field(default_factory=list)
+    choices: list[ChoiceOptionRow] = field(default_factory=list)
     text_answer: str = ""
+    correct_text_answer: str = ""
     is_correct: bool | None = None
     points_awarded: float = 0
 
@@ -310,21 +316,24 @@ def get_attempt_detail(attempt: Attempt, lang: str = "uz") -> AttemptDetail:
             continue
         answer = answers_by_question.get(question_id)
         choices = list(question.choices.all())
-        choice_map = {str(c.id): c for c in choices}
-        selected_ids = answer.selected_choice_ids if answer else []
+        selected_ids = set(answer.selected_choice_ids if answer else [])
 
         rows.append(AnswerBreakdownRow(
             question_id=question_id,
             question_text=resolve_i18n(question.text, lang),
             question_type=question.type,
             points=question.points,
-            selected_choice_ids=selected_ids,
-            selected_texts=[
-                resolve_i18n(choice_map[cid].text, lang) for cid in selected_ids if cid in choice_map
+            # O'quvchi ko'rgan barcha variantlar — mentor tanlangan va to'g'ri
+            # javobni bir vaqtda ko'rib, testni xuddi o'quvchi ko'rgandek tahlil qila oladi.
+            choices=[
+                ChoiceOptionRow(
+                    id=str(c.id), text=resolve_i18n(c.text, lang),
+                    is_selected=str(c.id) in selected_ids, is_correct=c.is_correct,
+                )
+                for c in choices
             ],
-            correct_choice_ids=[str(c.id) for c in choices if c.is_correct],
-            correct_texts=[resolve_i18n(c.text, lang) for c in choices if c.is_correct],
             text_answer=answer.text_answer if answer else "",
+            correct_text_answer=question.correct_text_pattern if question.type == QuestionType.SHORT_TEXT else "",
             is_correct=answer.is_correct if answer else None,
             points_awarded=answer.points_awarded if answer else 0,
         ))

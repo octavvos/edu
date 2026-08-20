@@ -209,8 +209,11 @@ def test_get_attempt_detail_reports_selected_and_correct_choices():
     assert detail.student_display_name == student.display_name
     assert len(detail.answers) == 1
     answer_row = detail.answers[0]
-    assert answer_row.selected_choice_ids == [str(wrong.id)]
-    assert answer_row.selected_texts == ["5"]
-    assert answer_row.correct_choice_ids == [str(correct.id)]
-    assert answer_row.correct_texts == ["4"]
     assert answer_row.is_correct is False
+    # o'quvchi ko'rgan ikkala variant ham qaytadi — mentor tanlangan va to'g'ri
+    # javobni bir vaqtda ko'rishi uchun
+    by_text = {c.text: c for c in answer_row.choices}
+    assert by_text["4"].is_correct is True
+    assert by_text["4"].is_selected is False
+    assert by_text["5"].is_correct is False
+    assert by_text["5"].is_selected is True

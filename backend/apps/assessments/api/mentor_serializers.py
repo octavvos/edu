@@ -125,16 +125,21 @@ class StudentQuizResultRowSerializer(serializers.Serializer):
     attempt_count = serializers.IntegerField()
 
 
+class ChoiceOptionRowSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    text = serializers.CharField()
+    is_selected = serializers.BooleanField()
+    is_correct = serializers.BooleanField()
+
+
 class AnswerBreakdownRowSerializer(serializers.Serializer):
     question_id = serializers.CharField()
     question_text = serializers.CharField()
     question_type = serializers.CharField()
     points = serializers.IntegerField()
-    selected_choice_ids = serializers.ListField(child=serializers.CharField())
-    selected_texts = serializers.ListField(child=serializers.CharField())
-    correct_choice_ids = serializers.ListField(child=serializers.CharField())
-    correct_texts = serializers.ListField(child=serializers.CharField())
+    choices = ChoiceOptionRowSerializer(many=True)
     text_answer = serializers.CharField(allow_blank=True)
+    correct_text_answer = serializers.CharField(allow_blank=True)
     is_correct = serializers.BooleanField(allow_null=True)
     points_awarded = serializers.FloatField()
 
