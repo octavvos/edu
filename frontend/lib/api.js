@@ -163,6 +163,12 @@ export const mentorApi = {
       presentation_id: presentationId || null,
     }),
   groupLeaderboard: (groupId) => api.get(`/mentor/groups/${groupId}/leaderboard/`),
+  // Testni guruhga yuborish
+  testAssignments: (lessonId) => api.get(`/mentor/lessons/${lessonId}/quiz-assignment/`),
+  sendTest: (lessonId, groupId) =>
+    api.post(`/mentor/lessons/${lessonId}/quiz-assignment/`, { group_id: groupId }),
+  unsendTest: (lessonId, groupId) =>
+    api.delete(`/mentor/lessons/${lessonId}/quiz-assignment/`, { params: { group_id: groupId } }),
   // Davomat
   attendance: (groupId, date) =>
     api.get(`/mentor/groups/${groupId}/attendance/`, { params: date ? { date } : {} }),

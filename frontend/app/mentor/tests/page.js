@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "../../../components/AppShell";
 import QuizBuilder from "../../../components/mentor/QuizBuilder";
+import SendTestModal from "../../../components/mentor/SendTestModal";
 import { ChevronDown, ChevronRight, HelpCircle, Plus, Search, X } from "../../../components/Icons";
 import { useNotify } from "../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../lib/api";
@@ -296,25 +297,35 @@ function TestLessonRow({ lesson, open, onToggle, onChanged, onError }) {
     }
   }
 
+  const sentGroups = lesson.quiz_sent_groups || [];
+
   return (
     <div className="card-compact" style={{ background: "var(--bg-subtle)", border: "none", boxShadow: "none" }}>
       <div className="row-between">
-        <div className="row" style={{ gap: 9 }}>
+        <div className="row" style={{ gap: 9, flexWrap: "wrap" }}>
           <HelpCircle width={15} height={15} className="dim" />
           <span className="strong small">{lesson.title}</span>
+          {sentGroups.map((g) => (
+            <span key={g.id} className="badge badge-success">{g.name}</span>
+          ))}
         </div>
 
-        {lesson.quiz_id ? (
-          <button className="btn btn-ghost btn-sm" onClick={onToggle}>
-            {open ? <ChevronDown width={14} height={14} /> : <ChevronRight width={14} height={14} />}
-            {open ? "Yopish" : "Boshqarish"}
-          </button>
-        ) : (
-          <button className="btn btn-sm" onClick={handleCreateQuiz} disabled={creatingQuiz}>
-            {creatingQuiz ? <span className="spinner" /> : <Plus width={14} height={14} />}
-            Test ochish
-          </button>
-        )}
+        <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+          {lesson.quiz_id && (
+            <SendTestModal lesson={lesson} sentGroups={sentGroups} onSent={onChanged} />
+          )}
+          {lesson.quiz_id ? (
+            <button className="btn btn-ghost btn-sm" onClick={onToggle}>
+              {open ? <ChevronDown width={14} height={14} /> : <ChevronRight width={14} height={14} />}
+              {open ? "Yopish" : "Boshqarish"}
+            </button>
+          ) : (
+            <button className="btn btn-sm" onClick={handleCreateQuiz} disabled={creatingQuiz}>
+              {creatingQuiz ? <span className="spinner" /> : <Plus width={14} height={14} />}
+              Test ochish
+            </button>
+          )}
+        </div>
       </div>
 
       {open && lesson.quiz_id && <QuizBuilder quizId={lesson.quiz_id} onError={onError} />}

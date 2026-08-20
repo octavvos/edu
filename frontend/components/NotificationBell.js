@@ -8,6 +8,7 @@ import { useNotifications } from "./NotificationProvider";
 /** Bildirishnoma turi bo'yicha bosilganda qayerga o'tilishi. */
 const EVENT_ROUTES = {
   homework_assigned: "/assignments",
+  test_assigned: "/tests",
 };
 
 /** Sarlavhadagi qo'ng'iroqcha — bosilganda tarix pastga ketma-ket ochiladi. */
