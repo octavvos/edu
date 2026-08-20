@@ -5,6 +5,7 @@ export function formatDuration(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.round(totalSeconds % 60);
   if (minutes === 0) return `${seconds}s`;
+  if (seconds === 0) return `${minutes} daq`;
   return `${minutes} daq ${seconds}s`;
 }
 

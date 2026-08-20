@@ -16,17 +16,25 @@ class MentorLessonSerializer(serializers.ModelSerializer):
     quiz_id = serializers.SerializerMethodField()
     sent_to_groups = serializers.SerializerMethodField()
     quiz_sent_groups = serializers.SerializerMethodField()
+    quiz_question_count = serializers.SerializerMethodField()
+    quiz_time_limit_seconds = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
         fields = (
             "id", "type", "title", "text_content", "order", "is_required",
             "is_free_preview", "materials", "video_asset", "quiz_id", "sent_to_groups",
-            "quiz_sent_groups",
+            "quiz_sent_groups", "quiz_question_count", "quiz_time_limit_seconds",
         )
 
     def get_quiz_id(self, obj) -> str | None:
         return str(obj.quiz.id) if hasattr(obj, "quiz") else None
+
+    def get_quiz_question_count(self, obj) -> int | None:
+        return len(obj.quiz.questions.all()) if hasattr(obj, "quiz") else None
+
+    def get_quiz_time_limit_seconds(self, obj) -> int | None:
+        return obj.quiz.time_limit_seconds if hasattr(obj, "quiz") else None
 
     def get_sent_to_groups(self, obj) -> list:
         """Vazifa qaysi guruhlarga jo'natilgan — sillabusda belgi sifatida ko'rsatiladi."""
