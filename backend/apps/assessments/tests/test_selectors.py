@@ -97,3 +97,120 @@ def test_get_my_quizzes_reflects_best_score_and_in_progress():
     assert row["passed"] is True
     assert row["has_in_progress"] is True
     assert row["in_progress_attempt_id"] == str(second_attempt.id)
+
+
+# ---------------------------------------------------------------------------
+# Mentor: test natijalari tahlili
+# ---------------------------------------------------------------------------
+
+
+def _solve(student, quiz, question, *, select=None):
+    """`select` — javob sifatida belgilanadigan Choice (None bo'lsa javobsiz qoldiriladi)."""
+    from apps.enrollment.models import Enrollment
+
+    enrollment = Enrollment.objects.get(user=student, course=quiz.lesson.module.course)
+    attempt = services.start_attempt(user=student, enrollment=enrollment, quiz=quiz)
+    selected = [str(select.id)] if select else []
+    services.submit_answer(attempt=attempt, question=question, selected_choice_ids=selected)
+    return services.finalize_attempt(attempt=attempt)
+
+
+def test_get_groups_with_quiz_results_lists_only_groups_with_sent_tests():
+    mentor = UserFactory()
+    course = CourseFactory(price=0)
+    sent_group = GroupFactory(course=course, mentor=mentor)
+    unsent_group = GroupFactory(course=course, mentor=mentor)
+    _admit(mentor, sent_group)
+    _, quiz, _, _ = _make_quiz(course)
+    services.assign_quiz_to_group(mentor=mentor, quiz=quiz, group=sent_group)
+
+    rows = selectors.get_groups_with_quiz_results(mentor)
+
+    assert [r.group_id for r in rows] == [str(sent_group.id)]
+    assert unsent_group.id != sent_group.id
+    row = rows[0]
+    assert row.tests_sent == 1
+    assert row.student_count == 1
+    assert row.avg_score is None
+    assert row.completion_percent == 0.0
+
+
+def test_get_groups_with_quiz_results_reflects_submitted_attempts():
+    mentor = UserFactory()
+    course = CourseFactory(price=0)
+    group = GroupFactory(course=course, mentor=mentor)
+    student = _admit(mentor, group)
+    lesson, quiz, question, correct = _make_quiz(course)
+    services.assign_quiz_to_group(mentor=mentor, quiz=quiz, group=group)
+    _solve(student, quiz, question, select=correct)
+
+    row = selectors.get_groups_with_quiz_results(mentor)[0]
+
+    assert row.avg_score == 100.0
+    assert row.completion_percent == 100.0
+
+
+def test_get_group_quiz_leaderboard_ranks_by_avg_score():
+    mentor = UserFactory()
+    course = CourseFactory(price=0)
+    group = GroupFactory(course=course, mentor=mentor)
+    top_student = _admit(mentor, group)
+    low_student = _admit(mentor, group)
+    lesson, quiz, question, correct = _make_quiz(course)
+    services.assign_quiz_to_group(mentor=mentor, quiz=quiz, group=group)
+
+    _solve(top_student, quiz, question, select=correct)
+    _solve(low_student, quiz, question, select=None)
+
+    rows = selectors.get_group_quiz_leaderboard(group)
+
+    assert [r.student_id for r in rows] == [str(top_student.id), str(low_student.id)]
+    assert rows[0].rank == 1
+    assert rows[0].avg_score == 100.0
+    assert rows[0].tests_solved == 1
+    assert rows[1].rank == 2
+    assert rows[1].avg_score == 0.0
+
+
+def test_get_student_quiz_results_reports_per_test_outcome():
+    mentor = UserFactory()
+    course = CourseFactory(price=0)
+    group = GroupFactory(course=course, mentor=mentor)
+    student = _admit(mentor, group)
+    lesson, quiz, question, correct = _make_quiz(course)
+    services.assign_quiz_to_group(mentor=mentor, quiz=quiz, group=group)
+    attempt = _solve(student, quiz, question, select=correct)
+
+    rows = selectors.get_student_quiz_results(group, student)
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.lesson_id == str(lesson.id)
+    assert row.status == "passed"
+    assert row.score_percent == 100.0
+    assert row.attempt_id == str(attempt.id)
+    assert row.attempt_count == 1
+    assert row.time_taken_seconds is not None
+
+
+def test_get_attempt_detail_reports_selected_and_correct_choices():
+    mentor = UserFactory()
+    course = CourseFactory(price=0)
+    group = GroupFactory(course=course, mentor=mentor)
+    student = _admit(mentor, group)
+    lesson, quiz, question, correct = _make_quiz(course)
+    services.assign_quiz_to_group(mentor=mentor, quiz=quiz, group=group)
+    wrong = question.choices.exclude(id=correct.id).first()
+    attempt = _solve(student, quiz, question, select=wrong)  # student ataylab noto'g'ri variantni tanlaydi
+
+    detail = selectors.get_attempt_detail(attempt)
+
+    assert detail.attempt_id == str(attempt.id)
+    assert detail.student_display_name == student.display_name
+    assert len(detail.answers) == 1
+    answer_row = detail.answers[0]
+    assert answer_row.selected_choice_ids == [str(wrong.id)]
+    assert answer_row.selected_texts == ["5"]
+    assert answer_row.correct_choice_ids == [str(correct.id)]
+    assert answer_row.correct_texts == ["4"]
+    assert answer_row.is_correct is False

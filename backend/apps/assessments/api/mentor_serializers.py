@@ -83,3 +83,69 @@ class QuestionUpdateSerializer(QuestionWriteSerializer):
     type = serializers.ChoiceField(choices=QuestionType.choices, required=False)
     text = serializers.JSONField(required=False)
     choices = ChoiceWriteSerializer(many=True, required=False, default=None, allow_null=True)
+
+
+# ---------------------------------------------------------------------------
+# Test natijalari tahlili (apps.assessments.selectors dataclass'lari bilan mos)
+# ---------------------------------------------------------------------------
+
+
+class GroupQuizSummarySerializer(serializers.Serializer):
+    group_id = serializers.CharField()
+    group_name = serializers.CharField()
+    course_title = serializers.CharField()
+    tests_sent = serializers.IntegerField()
+    student_count = serializers.IntegerField()
+    avg_score = serializers.FloatField(allow_null=True)
+    completion_percent = serializers.FloatField()
+
+
+class QuizLeaderboardRowSerializer(serializers.Serializer):
+    rank = serializers.IntegerField()
+    student_id = serializers.CharField()
+    display_name = serializers.CharField()
+    username = serializers.CharField()
+    tests_assigned = serializers.IntegerField()
+    tests_solved = serializers.IntegerField()
+    avg_score = serializers.FloatField(allow_null=True)
+    total_time_seconds = serializers.IntegerField()
+    last_activity = serializers.CharField(allow_null=True)
+
+
+class StudentQuizResultRowSerializer(serializers.Serializer):
+    lesson_id = serializers.CharField()
+    quiz_title = serializers.CharField()
+    module_title = serializers.CharField()
+    attempt_id = serializers.CharField(allow_null=True)
+    status = serializers.CharField()
+    score_percent = serializers.FloatField(allow_null=True)
+    passed = serializers.BooleanField(allow_null=True)
+    time_taken_seconds = serializers.IntegerField(allow_null=True)
+    submitted_at = serializers.CharField(allow_null=True)
+    attempt_count = serializers.IntegerField()
+
+
+class AnswerBreakdownRowSerializer(serializers.Serializer):
+    question_id = serializers.CharField()
+    question_text = serializers.CharField()
+    question_type = serializers.CharField()
+    points = serializers.IntegerField()
+    selected_choice_ids = serializers.ListField(child=serializers.CharField())
+    selected_texts = serializers.ListField(child=serializers.CharField())
+    correct_choice_ids = serializers.ListField(child=serializers.CharField())
+    correct_texts = serializers.ListField(child=serializers.CharField())
+    text_answer = serializers.CharField(allow_blank=True)
+    is_correct = serializers.BooleanField(allow_null=True)
+    points_awarded = serializers.FloatField()
+
+
+class AttemptDetailSerializer(serializers.Serializer):
+    attempt_id = serializers.CharField()
+    quiz_title = serializers.CharField()
+    student_display_name = serializers.CharField()
+    score_percent = serializers.FloatField(allow_null=True)
+    passed = serializers.BooleanField(allow_null=True)
+    started_at = serializers.CharField()
+    submitted_at = serializers.CharField(allow_null=True)
+    time_taken_seconds = serializers.IntegerField(allow_null=True)
+    answers = AnswerBreakdownRowSerializer(many=True)

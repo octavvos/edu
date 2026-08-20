@@ -9,15 +9,19 @@ from rest_framework.views import APIView
 
 from apps.assessments import services
 from apps.assessments.api.mentor_serializers import (
+    AttemptDetailSerializer,
+    GroupQuizSummarySerializer,
     QuestionMentorSerializer,
     QuestionUpdateSerializer,
     QuestionWriteSerializer,
     QuizAssignSerializer,
     QuizAssignmentSerializer,
     QuizDetailSerializer,
+    QuizLeaderboardRowSerializer,
     QuizSettingsSerializer,
+    StudentQuizResultRowSerializer,
 )
-from apps.assessments.models import Question, Quiz
+from apps.assessments.models import Attempt, Question, Quiz
 from apps.core.exceptions import DomainError
 from apps.courses.models import Lesson
 from apps.courses.services import assert_can_manage_lesson
@@ -26,6 +30,14 @@ from apps.rbac.permissions import HasPermission
 
 def _assert_owns_quiz(mentor, quiz: Quiz) -> None:
     assert_can_manage_lesson(mentor=mentor, lesson=quiz.lesson)
+
+
+def _get_owned_group(request, group_id):
+    from apps.groups.models import Group
+
+    if request.user.is_superuser:
+        return get_object_or_404(Group, id=group_id)
+    return get_object_or_404(Group, id=group_id, mentor=request.user)
 
 
 class MentorQuizCreateView(APIView):
@@ -220,3 +232,86 @@ class MentorQuizAssignmentView(APIView):
         except DomainError as exc:
             return Response({"detail": exc.detail}, status=exc.status_code)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MentorQuizResultsGroupsView(APIView):
+    """GET /api/v1/mentor/quiz-results/groups/ — test jo'natilgan guruhlar
+    umumiy o'zlashtirish ko'rsatkichi bilan."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "content.manage"
+
+    @extend_schema(responses=GroupQuizSummarySerializer(many=True))
+    def get(self, request):
+        from apps.assessments.selectors import get_groups_with_quiz_results
+
+        rows = get_groups_with_quiz_results(request.user)
+        return Response(GroupQuizSummarySerializer(rows, many=True).data)
+
+
+class MentorQuizResultsLeaderboardView(APIView):
+    """GET /api/v1/mentor/quiz-results/groups/{group_id}/ — shu guruhga
+    jo'natilgan testlar bo'yicha o'quvchilar reytingi."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "content.manage"
+
+    @extend_schema(responses=QuizLeaderboardRowSerializer(many=True))
+    def get(self, request, group_id):
+        from apps.assessments.selectors import get_group_quiz_leaderboard
+
+        group = _get_owned_group(request, group_id)
+        rows = get_group_quiz_leaderboard(group)
+        return Response(QuizLeaderboardRowSerializer(rows, many=True).data)
+
+
+class MentorQuizResultsStudentView(APIView):
+    """GET /api/v1/mentor/quiz-results/groups/{group_id}/students/{student_id}/
+    — bitta o'quvchining shu guruhga jo'natilgan har bir testdagi natijasi."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "content.manage"
+
+    @extend_schema(responses=StudentQuizResultRowSerializer(many=True))
+    def get(self, request, group_id, student_id):
+        from apps.groups.models import GroupMembership, MembershipStatus
+
+        group = _get_owned_group(request, group_id)
+        membership = get_object_or_404(
+            GroupMembership.objects.select_related("student"),
+            group=group, student_id=student_id, status=MembershipStatus.ACTIVE,
+        )
+        from apps.assessments.selectors import get_student_quiz_results
+
+        rows = get_student_quiz_results(group, membership.student)
+        return Response(StudentQuizResultRowSerializer(rows, many=True).data)
+
+
+class MentorQuizResultsAttemptView(APIView):
+    """GET /api/v1/mentor/quiz-results/groups/{group_id}/attempts/{attempt_id}/
+    — o'quvchi qaysi savolga nima belgilagani va bu to'g'ri bo'lganmi."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "content.manage"
+
+    @extend_schema(responses=AttemptDetailSerializer)
+    def get(self, request, group_id, attempt_id):
+        from apps.groups.models import GroupMembership, MembershipStatus
+
+        from apps.assessments.models import QuizAssignment
+        from apps.assessments.selectors import get_attempt_detail
+
+        group = _get_owned_group(request, group_id)
+        attempt = get_object_or_404(
+            Attempt.objects.select_related("quiz__lesson", "user"), id=attempt_id,
+        )
+        is_member = GroupMembership.objects.filter(
+            group=group, student_id=attempt.user_id, status=MembershipStatus.ACTIVE,
+        ).exists()
+        is_assigned = QuizAssignment.objects.filter(quiz=attempt.quiz, group=group).exists()
+        if not (is_member and is_assigned):
+            from django.http import Http404
+
+            raise Http404
+        detail = get_attempt_detail(attempt)
+        return Response(AttemptDetailSerializer(detail).data)
