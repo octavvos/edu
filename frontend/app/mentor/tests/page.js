@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "../../../components/AppShell";
 import QuizBuilder from "../../../components/mentor/QuizBuilder";
-import { ChevronDown, ChevronRight, HelpCircle, Plus } from "../../../components/Icons";
+import { ChevronDown, ChevronRight, HelpCircle, Plus, Search, X } from "../../../components/Icons";
 import { useNotify } from "../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth";
@@ -15,6 +15,7 @@ export default function MentorTestsPage() {
   const [courses, setCourses] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [openLessonId, setOpenLessonId] = useState(null);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(() => {
     return mentorApi
@@ -28,18 +29,40 @@ export default function MentorTestsPage() {
     if (!loading) load();
   }, [loading, load]);
 
-  const quizGroups = useMemo(() => {
+  // Kurs -> faqat testli modullar -> shu moduldagi test darslari
+  const courseGroups = useMemo(() => {
     return courses
       .map((course) => ({
         course,
-        lessons: course.modules.flatMap((module) =>
-          module.lessons
-            .filter((lesson) => lesson.type === "quiz")
-            .map((lesson) => ({ ...lesson, moduleTitle: module.title })),
-        ),
+        modules: course.modules
+          .map((module) => ({
+            module,
+            lessons: module.lessons.filter((lesson) => lesson.type === "quiz"),
+          }))
+          .filter((m) => m.lessons.length > 0),
       }))
-      .filter((g) => g.lessons.length > 0);
+      .filter((c) => c.modules.length > 0);
   }, [courses]);
+
+  const q = query.trim().toLowerCase();
+  const filteredGroups = useMemo(() => {
+    if (!q) return courseGroups;
+    return courseGroups
+      .map(({ course, modules }) => ({
+        course,
+        modules: modules
+          .map((m) => ({ ...m, lessons: m.lessons.filter((l) => l.title.toLowerCase().includes(q)) }))
+          .filter((m) => m.lessons.length > 0),
+      }))
+      .filter((c) => c.modules.length > 0);
+  }, [courseGroups, q]);
+
+  const totalTests = courseGroups.reduce((sum, c) => sum + c.modules.reduce((s, m) => s + m.lessons.length, 0), 0);
+  const totalModules = courseGroups.reduce((sum, c) => sum + c.modules.length, 0);
+  const unopened = courseGroups.reduce(
+    (sum, c) => sum + c.modules.reduce((s, m) => s + m.lessons.filter((l) => !l.quiz_id).length, 0),
+    0,
+  );
 
   if (loading) {
     return <div className="app-shell"><main><div className="skeleton" style={{ height: 200 }} /></main></div>;
@@ -56,12 +79,54 @@ export default function MentorTestsPage() {
 
       <TestCreateCard courses={courses} onCreated={(lessonId) => { load(); setOpenLessonId(lessonId); }} onError={notify} />
 
+      {!dataLoading && totalTests > 0 && (
+        <>
+          <div className="stats mt-3">
+            <div className="stat">
+              <div className="stat-label">Jami test</div>
+              <div className="stat-value">{totalTests}</div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">Bo&apos;limlar</div>
+              <div className="stat-value">{totalModules}</div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">Ochilmagan</div>
+              <div className="stat-value" style={{ color: unopened ? "var(--warning)" : undefined }}>
+                {unopened}
+              </div>
+            </div>
+          </div>
+
+          <div className="field mt-3 mb-1" style={{ maxWidth: 340, position: "relative" }}>
+            <Search width={15} height={15} className="dim" style={{ position: "absolute", left: 12, top: 12 }} />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Test nomi bo'yicha qidirish…"
+              style={{ paddingLeft: 34, paddingRight: query ? 34 : undefined, marginBottom: 0 }}
+            />
+            {query && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setQuery("")}
+                style={{ position: "absolute", right: 3, top: 3, padding: 6 }}
+                aria-label="Qidiruvni tozalash"
+              >
+                <X width={13} height={13} />
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
       {dataLoading ? (
         <div className="stack mt-3">
           <div className="skeleton" style={{ height: 90 }} />
           <div className="skeleton" style={{ height: 90 }} />
         </div>
-      ) : quizGroups.length === 0 ? (
+      ) : totalTests === 0 ? (
         <div className="card mt-3">
           <div className="empty">
             <div className="empty-icon"><HelpCircle /></div>
@@ -69,20 +134,24 @@ export default function MentorTestsPage() {
             <p>Yuqoridagi forma orqali birinchi testingizni yarating.</p>
           </div>
         </div>
+      ) : filteredGroups.length === 0 ? (
+        <p className="small dim mt-3">&quot;{query}&quot; bo&apos;yicha hech narsa topilmadi.</p>
       ) : (
-        <div className="stack mt-3">
-          {quizGroups.map(({ course, lessons }) => (
+        <div className="stack mt-2">
+          {filteredGroups.map(({ course, modules }) => (
             <section key={course.id} className="card">
               <div className="card-head">
                 <h2>{course.title}</h2>
               </div>
-              <div className="stack" style={{ gap: 8 }}>
-                {lessons.map((lesson) => (
-                  <TestLessonRow
-                    key={lesson.id}
-                    lesson={lesson}
-                    open={openLessonId === lesson.id}
-                    onToggle={() => setOpenLessonId(openLessonId === lesson.id ? null : lesson.id)}
+              <div className="stack" style={{ gap: 10 }}>
+                {modules.map(({ module, lessons }) => (
+                  <TestModuleBlock
+                    key={module.id}
+                    module={module}
+                    lessons={lessons}
+                    forceOpen={Boolean(q)}
+                    openLessonId={openLessonId}
+                    setOpenLessonId={setOpenLessonId}
                     onChanged={load}
                     onError={notify}
                   />
@@ -173,6 +242,44 @@ function TestCreateCard({ courses, onCreated, onError }) {
 
 // ---------------------------------------------------------------------------
 
+function TestModuleBlock({ module, lessons, forceOpen, openLessonId, setOpenLessonId, onChanged, onError }) {
+  const [manualOpen, setManualOpen] = useState(false);
+  const open = forceOpen || manualOpen;
+  const missing = lessons.filter((l) => !l.quiz_id).length;
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 14 }}>
+      <div className="row-between">
+        <button
+          className="row"
+          style={{ background: "none", border: "none", cursor: "pointer", gap: 7, padding: 0, textAlign: "left" }}
+          onClick={() => setManualOpen((v) => !v)}
+        >
+          {open ? <ChevronDown width={16} height={16} /> : <ChevronRight width={16} height={16} />}
+          <strong>{module.title}</strong>
+          <span className="chip">{lessons.length} ta test</span>
+        </button>
+        {missing > 0 && <span className="badge badge-warning">{missing} ochilmagan</span>}
+      </div>
+
+      {open && (
+        <div className="stack mt-2" style={{ gap: 8 }}>
+          {lessons.map((lesson) => (
+            <TestLessonRow
+              key={lesson.id}
+              lesson={lesson}
+              open={openLessonId === lesson.id}
+              onToggle={() => setOpenLessonId(openLessonId === lesson.id ? null : lesson.id)}
+              onChanged={onChanged}
+              onError={onError}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TestLessonRow({ lesson, open, onToggle, onChanged, onError }) {
   const [creatingQuiz, setCreatingQuiz] = useState(false);
 
@@ -190,14 +297,11 @@ function TestLessonRow({ lesson, open, onToggle, onChanged, onError }) {
   }
 
   return (
-    <div className="card" style={{ padding: "11px 14px" }}>
+    <div className="card-compact" style={{ background: "var(--bg-subtle)", border: "none", boxShadow: "none" }}>
       <div className="row-between">
         <div className="row" style={{ gap: 9 }}>
           <HelpCircle width={15} height={15} className="dim" />
-          <div>
-            <div className="strong small">{lesson.title}</div>
-            <div className="small dim">{lesson.moduleTitle}</div>
-          </div>
+          <span className="strong small">{lesson.title}</span>
         </div>
 
         {lesson.quiz_id ? (

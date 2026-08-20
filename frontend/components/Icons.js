@@ -185,6 +185,13 @@ export const Moon = (p) => (
   </svg>
 );
 
+export const Search = (p) => (
+  <svg {...base} {...p}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </svg>
+);
+
 export const Sparkle = (p) => (
   <svg {...base} {...p}>
     <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
