@@ -47,8 +47,9 @@
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Tizim tungi rejimni afzal ko'rsa VA foydalanuvchi qo'lda "light" tanlamagan bo'lsa */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0e1016;
     --bg-elevated: #171922;
     --bg-subtle: #1d202b;
@@ -79,6 +80,39 @@
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
   }
+}
+
+/* Foydalanuvchi qo'lda tanlagan rejim — tugma orqali, tizim sozlamasidan qat'i nazar */
+:root[data-theme="dark"] {
+  --bg: #0e1016;
+  --bg-elevated: #171922;
+  --bg-subtle: #1d202b;
+  --bg-hover: #242835;
+
+  --text: #eceef5;
+  --text-secondary: #a8afc4;
+  --text-muted: #6f7691;
+
+  --border: #262a37;
+  --border-strong: #363b4d;
+
+  --primary: #7c7cf0;
+  --primary-hover: #8f8ff5;
+  --primary-soft: #1e1f3d;
+  --primary-text: #ffffff;
+
+  --success: #3dd68c;
+  --success-soft: #13291f;
+  --warning: #ffb224;
+  --warning-soft: #2c1f0e;
+  --danger: #ff6369;
+  --danger-soft: #2d1416;
+  --info: #52a9ff;
+  --info-soft: #10243e;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 * { box-sizing: border-box; }
@@ -857,6 +891,46 @@ tbody tr:hover { background: var(--bg-subtle); }
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(16px); }
   to   { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+   Tun/kun rejimi tugmasi
+   ========================================================================== */
+
+.theme-toggle {
+  position: relative;
+  padding: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.theme-toggle svg {
+  position: absolute;
+  transition: transform 0.35s var(--ease), opacity 0.25s var(--ease);
+}
+
+.theme-toggle .icon-sun {
+  opacity: 0;
+  transform: rotate(-60deg) scale(0.5);
+}
+
+.theme-toggle .icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+[data-theme="dark"] .theme-toggle .icon-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+[data-theme="dark"] .theme-toggle .icon-moon {
+  opacity: 0;
+  transform: rotate(60deg) scale(0.5);
 }
 
 /* ==========================================================================

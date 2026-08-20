@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { hasRole, initials, logout } from "../lib/auth";
 import { LogOut } from "./Icons";
 import NotificationBell from "./NotificationBell";
+import ThemeToggle from "./ThemeToggle";
 
 const ROLE_LABEL = {
   manager: "Manager",
@@ -57,28 +58,31 @@ export default function AppShell({ user, children, narrow = false }) {
           ))}
         </nav>
 
-        {user && (
-          <div className="row" style={{ gap: 10, marginLeft: 8 }}>
-            <NotificationBell />
-            <div className="row" style={{ gap: 9 }}>
-              <div className="avatar avatar-sm">{initials(user)}</div>
-              <div style={{ lineHeight: 1.25 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 600 }}>{user.display_name}</div>
-                <div style={{ fontSize: 11.5 }} className="dim">
-                  {ROLE_LABEL[primaryRole] || "Foydalanuvchi"}
+        <div className="row" style={{ gap: 10, marginLeft: 8 }}>
+          <ThemeToggle user={user} />
+          {user && (
+            <>
+              <NotificationBell />
+              <div className="row" style={{ gap: 9 }}>
+                <div className="avatar avatar-sm">{initials(user)}</div>
+                <div style={{ lineHeight: 1.25 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>{user.display_name}</div>
+                  <div style={{ fontSize: 11.5 }} className="dim">
+                    {ROLE_LABEL[primaryRole] || "Foydalanuvchi"}
+                  </div>
                 </div>
               </div>
-            </div>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => logout(router)}
-              title="Chiqish"
-              aria-label="Chiqish"
-            >
-              <LogOut width={15} height={15} />
-            </button>
-          </div>
-        )}
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => logout(router)}
+                title="Chiqish"
+                aria-label="Chiqish"
+              >
+                <LogOut width={15} height={15} />
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
       <main className={narrow ? "main-narrow" : undefined}>{children}</main>

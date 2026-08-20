@@ -19,9 +19,23 @@ export const viewport = {
  * Sarlavha/navigatsiya har bir sahifada AppShell orqali render qilinadi,
  * chunki u foydalanuvchi roliga bog'liq — root layout faqat html qobig'i.
  */
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var theme = localStorage.getItem("edu_theme");
+    if (theme === "dark" || theme === "light") {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="uz">
+    <html lang="uz" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         <NotificationProvider>{children}</NotificationProvider>
       </body>
