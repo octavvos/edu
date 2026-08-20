@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "../../../components/AppShell";
 import EditQuizModal from "../../../components/mentor/EditQuizModal";
 import SendTestModal from "../../../components/mentor/SendTestModal";
-import { Book, Clock, HelpCircle, Plus, Search, Settings, X } from "../../../components/Icons";
+import { Book, ChevronLeft, ChevronRight, Clock, HelpCircle, Plus, Search, Settings, X } from "../../../components/Icons";
 import { useNotify } from "../../../components/NotificationProvider";
 import { errorMessage, mentorApi } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth";
@@ -286,9 +286,20 @@ function TestCreateCard({ courses, onCreated, onError }) {
 
 // ---------------------------------------------------------------------------
 
+const TESTS_PER_PAGE = 12;
+
 function TestModuleBlock({ module, lessons, onManage, onChanged, onError }) {
   const missing = lessons.filter((l) => !l.quiz_id).length;
   const opened = lessons.length - missing;
+
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(lessons.length / TESTS_PER_PAGE));
+
+  // Qidiruv natijasi o'zgarsa (test soni farq qilsa) birinchi sahifaga qaytamiz
+  useEffect(() => { setPage(1); }, [lessons.length]);
+
+  const currentPage = Math.min(page, totalPages);
+  const pageLessons = lessons.slice((currentPage - 1) * TESTS_PER_PAGE, currentPage * TESTS_PER_PAGE);
 
   return (
     <div>
@@ -304,7 +315,7 @@ function TestModuleBlock({ module, lessons, onManage, onChanged, onError }) {
       </div>
 
       <div className="tg-grid">
-        {lessons.map((lesson) => (
+        {pageLessons.map((lesson) => (
           <TestCard
             key={lesson.id}
             lesson={lesson}
@@ -315,6 +326,10 @@ function TestModuleBlock({ module, lessons, onManage, onChanged, onError }) {
         ))}
       </div>
 
+      {totalPages > 1 && (
+        <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
+      )}
+
       <style jsx>{`
         .tg-grid {
           display: grid;
@@ -322,6 +337,44 @@ function TestModuleBlock({ module, lessons, onManage, onChanged, onError }) {
           gap: 12px;
         }
       `}</style>
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages, onChange }) {
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  return (
+    <div className="row" style={{ justifyContent: "center", gap: 4, marginTop: 14 }}>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        aria-label="Oldingi sahifa"
+      >
+        <ChevronLeft width={14} height={14} />
+      </button>
+      {pages.map((p) => (
+        <button
+          key={p}
+          type="button"
+          className={`btn btn-sm ${p === page ? "" : "btn-ghost"}`}
+          style={{ minWidth: 34, padding: "6px 0" }}
+          onClick={() => onChange(p)}
+        >
+          {p}
+        </button>
+      ))}
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() => onChange(page + 1)}
+        disabled={page === totalPages}
+        aria-label="Keyingi sahifa"
+      >
+        <ChevronRight width={14} height={14} />
+      </button>
     </div>
   );
 }
